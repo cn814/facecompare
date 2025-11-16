@@ -135,9 +135,9 @@
 
         .face-box {
             position: absolute;
-            border: 3px solid #4caf50;
+            border: 4px solid #4caf50;
             border-radius: 5px;
-            pointer-events: none;
+            box-sizing: border-box;
         }
 
         .face-label {
@@ -440,8 +440,18 @@
             preview.classList.remove('hidden');
             preview.innerHTML = '';
             
+            // Create wrapper for canvas and face boxes
+            const canvasWrapper = document.createElement('div');
+            canvasWrapper.style.position = 'relative';
+            canvasWrapper.style.display = 'inline-block';
+            canvasWrapper.style.lineHeight = '0'; // Remove line-height spacing
+            canvasWrapper.style.fontSize = '0'; // Remove font-size spacing
+            
             const canvas = document.createElement('canvas');
             const ctx = canvas.getContext('2d');
+            canvas.style.display = 'block'; // Remove inline spacing
+            canvas.style.margin = '0';
+            canvas.style.padding = '0';
             
             // Scale down for display while keeping aspect ratio
             const maxDisplayWidth = 600;
@@ -459,9 +469,14 @@
             
             canvas.width = displayWidth;
             canvas.height = displayHeight;
+            canvas.style.width = displayWidth + 'px';
+            canvas.style.height = displayHeight + 'px';
+            canvas.style.maxWidth = displayWidth + 'px';
+            canvas.style.maxHeight = displayHeight + 'px';
             ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
             
-            preview.appendChild(canvas);
+            canvasWrapper.appendChild(canvas);
+            preview.appendChild(canvasWrapper);
             uploadArea.classList.add('has-image');
             
             // Detect ALL faces (using original image for accuracy)
@@ -505,37 +520,91 @@
                     drawLandmarks(canvas, detection.landmarks, scaleX, scaleY);
                 });
                 
+                // DEBUG: Draw boxes directly on canvas to verify coordinates
+                detections.forEach((detection) => {
+                    const landmarks = detection.landmarks.positions;
+                    const xs = landmarks.map(p => p.x);
+                    const ys = landmarks.map(p => p.y);
+                    
+                    const faceWidth = Math.max(...xs) - Math.min(...xs);
+                    const faceHeight = Math.max(...ys) - Math.min(...ys);
+                    const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
+                    const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
+                    
+                    const paddingFactor = 1.3;
+                    const boxWidth = faceWidth * paddingFactor;
+                    const boxHeight = faceHeight * paddingFactor;
+                    const boxX = centerX - (boxWidth / 2);
+                    const boxY = centerY - (boxHeight / 2);
+                    
+                    // Draw box on canvas
+                    ctx.strokeStyle = '#00ffff'; // Cyan for debug
+                    ctx.lineWidth = 3;
+                    ctx.strokeRect(boxX * scaleX, boxY * scaleY, boxWidth * scaleX, boxHeight * scaleY);
+                    
+                    console.log('Reference - Debug box (cyan on canvas):', {
+                        boxX: boxX * scaleX,
+                        boxY: boxY * scaleY,
+                        boxWidth: boxWidth * scaleX,
+                        boxHeight: boxHeight * scaleY,
+                        scaleX,
+                        scaleY
+                    });
+                });
+                
                 // Draw all face boxes
                 detections.forEach((detection, index) => {
-                    const box = detection.detection.box;
+                    // Calculate face size and center from landmarks
+                    const landmarks = detection.landmarks.positions;
+                    const xs = landmarks.map(p => p.x);
+                    const ys = landmarks.map(p => p.y);
+                    
+                    // Get face dimensions
+                    const faceWidth = Math.max(...xs) - Math.min(...xs);
+                    const faceHeight = Math.max(...ys) - Math.min(...ys);
+                    
+                    // Calculate center point
+                    const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
+                    const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
+                    
+                    // Create box centered on face with padding
+                    const paddingFactor = 1.3; // 30% larger than face bounds
+                    const boxWidth = faceWidth * paddingFactor;
+                    const boxHeight = faceHeight * paddingFactor;
+                    const boxX = centerX - (boxWidth / 2);
+                    const boxY = centerY - (boxHeight / 2);
+                    
                     const faceBox = document.createElement('div');
                     faceBox.className = 'face-box';
-                    faceBox.style.left = (box.x * scaleX) + 'px';
-                    faceBox.style.top = (box.y * scaleY) + 'px';
-                    faceBox.style.width = (box.width * scaleX) + 'px';
-                    faceBox.style.height = (box.height * scaleY) + 'px';
+                    faceBox.dataset.index = index;
+                    faceBox.style.left = (boxX * scaleX) + 'px';
+                    faceBox.style.top = (boxY * scaleY) + 'px';
+                    faceBox.style.width = (boxWidth * scaleX) + 'px';
+                    faceBox.style.height = (boxHeight * scaleY) + 'px';
                     faceBox.style.cursor = 'pointer';
                     faceBox.style.borderColor = index === 0 ? '#4caf50' : '#ff9800';
-                    faceBox.dataset.index = index;
                     
-                    // Calculate center of face using landmarks for better positioning
-                    const landmarks = detection.landmarks.positions;
-                    let centerX = 0, centerY = 0;
-                    landmarks.forEach(point => {
-                        centerX += point.x;
-                        centerY += point.y;
+                    console.log('Reference - Div box (green/orange):', {
+                        left: faceBox.style.left,
+                        top: faceBox.style.top,
+                        width: faceBox.style.width,
+                        height: faceBox.style.height,
+                        boxX_times_scaleX: boxX * scaleX,
+                        boxY_times_scaleY: boxY * scaleY
                     });
-                    centerX = (centerX / landmarks.length) * scaleX;
-                    centerY = (centerY / landmarks.length) * scaleY;
+                    
+                    // Calculate center for label (already have it)
+                    const labelCenterX = centerX * scaleX;
+                    const labelCenterY = centerY * scaleY;
                     
                     const label = document.createElement('div');
                     label.className = 'face-label';
                     label.style.backgroundColor = index === 0 ? '#4caf50' : '#ff9800';
                     label.textContent = index === 0 ? `Face ${index + 1} (Selected)` : `Face ${index + 1} - Click to select`;
-                    // Position label at center of face instead of top-left of box
+                    // Position label at center of face relative to box
                     label.style.position = 'absolute';
-                    label.style.left = (centerX - (box.x * scaleX)) + 'px';
-                    label.style.top = (centerY - (box.y * scaleY) - 12) + 'px';
+                    label.style.left = (labelCenterX - (boxX * scaleX)) + 'px';
+                    label.style.top = (labelCenterY - (boxY * scaleY) - 12) + 'px';
                     label.style.transform = 'translateX(-50%)';
                     faceBox.appendChild(label);
                     
@@ -545,14 +614,14 @@
                         selectReferenceFace(index);
                     });
                     
-                    preview.appendChild(faceBox);
+                    canvasWrapper.appendChild(faceBox);
                     
                     // Add sunglasses warning if detected
                     if (detection.hasSunglasses) {
                         const sunglassesWarning = document.createElement('div');
                         sunglassesWarning.style.position = 'absolute';
-                        sunglassesWarning.style.left = (box.x * scaleX) + 'px';
-                        sunglassesWarning.style.top = (box.y * scaleY + box.height * scaleY + 5) + 'px';
+                        sunglassesWarning.style.left = (boxX * scaleX) + 'px';
+                        sunglassesWarning.style.top = ((boxY + boxHeight) * scaleY + 5) + 'px';
                         sunglassesWarning.style.background = '#ff9800';
                         sunglassesWarning.style.color = 'white';
                         sunglassesWarning.style.padding = '3px 8px';
@@ -560,7 +629,7 @@
                         sunglassesWarning.style.fontSize = '11px';
                         sunglassesWarning.style.fontWeight = 'bold';
                         sunglassesWarning.textContent = '⚠️ Sunglasses detected';
-                        preview.appendChild(sunglassesWarning);
+                        canvasWrapper.appendChild(sunglassesWarning);
                     }
                 });
                 
@@ -767,6 +836,9 @@
                 
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
+                canvas.style.display = 'block'; // Remove inline spacing
+                canvas.style.margin = '0';
+                canvas.style.padding = '0';
                 
                 // Scale down for display
                 const maxDisplayWidth = 500;
@@ -784,6 +856,10 @@
                 
                 canvas.width = displayWidth;
                 canvas.height = displayHeight;
+                canvas.style.width = displayWidth + 'px';
+                canvas.style.height = displayHeight + 'px';
+                canvas.style.maxWidth = displayWidth + 'px';
+                canvas.style.maxHeight = displayHeight + 'px';
                 ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
                 
                 // Detect ALL faces (using original image)
@@ -813,6 +889,8 @@
                         detection.hasSunglasses = detectSunglasses(img, detection.landmarks);
                     });
                     
+                    const currentImageIndex = comparisonImages.length; // Store before push
+                    
                     comparisonImages.push({
                         file: file,
                         image: img,
@@ -822,6 +900,9 @@
                     const wrapper = document.createElement('div');
                     wrapper.style.position = 'relative';
                     wrapper.style.display = 'inline-block';
+                    wrapper.style.lineHeight = '0'; // Remove line-height spacing
+                    wrapper.style.fontSize = '0'; // Remove font-size spacing
+                    wrapper.dataset.imageIndex = currentImageIndex;
                     wrapper.appendChild(canvas);
                     
                     // Calculate scale factor for drawing boxes and landmarks
@@ -833,44 +914,136 @@
                         drawLandmarks(canvas, detection.landmarks, scaleX, scaleY);
                     });
                     
+                    // DEBUG: Draw boxes directly on canvas to verify coordinates
+                    detections.forEach((detection, debugIndex) => {
+                        const landmarks = detection.landmarks.positions;
+                        const xs = landmarks.map(p => p.x);
+                        const ys = landmarks.map(p => p.y);
+                        
+                        const faceWidth = Math.max(...xs) - Math.min(...xs);
+                        const faceHeight = Math.max(...ys) - Math.min(...ys);
+                        const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
+                        const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
+                        
+                        const paddingFactor = 1.3;
+                        const boxWidth = faceWidth * paddingFactor;
+                        const boxHeight = faceHeight * paddingFactor;
+                        const boxX = centerX - (boxWidth / 2);
+                        const boxY = centerY - (boxHeight / 2);
+                        
+                        // Draw box on canvas
+                        ctx.strokeStyle = '#00ffff'; // Cyan for debug
+                        ctx.lineWidth = 3;
+                        ctx.strokeRect(boxX * scaleX, boxY * scaleY, boxWidth * scaleX, boxHeight * scaleY);
+                        
+                        console.log('Comparison debug box (CYAN on canvas):', file.name, 'face', debugIndex, {
+                            boxX: boxX * scaleX,
+                            boxY: boxY * scaleY,
+                            boxWidth: boxWidth * scaleX,
+                            boxHeight: boxHeight * scaleY,
+                            canvasBitmapWidth: canvas.width,
+                            canvasBitmapHeight: canvas.height,
+                            canvasCSSWidth: canvas.clientWidth,
+                            canvasCSSHeight: canvas.clientHeight,
+                            scaleMismatch: canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight
+                        });
+                    });
+                    
                     // Draw all face boxes
                     detections.forEach((detection, faceIndex) => {
-                        const box = detection.detection.box;
+                        // Calculate face size and center from landmarks
+                        const landmarks = detection.landmarks.positions;
+                        const xs = landmarks.map(p => p.x);
+                        const ys = landmarks.map(p => p.y);
+                        
+                        // Get face dimensions
+                        const faceWidth = Math.max(...xs) - Math.min(...xs);
+                        const faceHeight = Math.max(...ys) - Math.min(...ys);
+                        
+                        // Calculate center point
+                        const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
+                        const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
+                        
+                        // Create box centered on face with padding
+                        const paddingFactor = 1.3; // 30% larger than face bounds
+                        const boxWidth = faceWidth * paddingFactor;
+                        const boxHeight = faceHeight * paddingFactor;
+                        const boxX = centerX - (boxWidth / 2);
+                        const boxY = centerY - (boxHeight / 2);
+                        
                         const faceBox = document.createElement('div');
                         faceBox.className = 'face-box';
-                        faceBox.style.left = (box.x * scaleX) + 'px';
-                        faceBox.style.top = (box.y * scaleY) + 'px';
-                        faceBox.style.width = (box.width * scaleX) + 'px';
-                        faceBox.style.height = (box.height * scaleY) + 'px';
+                        faceBox.dataset.faceIndex = faceIndex;
+                        faceBox.style.left = (boxX * scaleX) + 'px';
+                        faceBox.style.top = (boxY * scaleY) + 'px';
+                        faceBox.style.width = (boxWidth * scaleX) + 'px';
+                        faceBox.style.height = (boxHeight * scaleY) + 'px';
                         
-                        // Calculate center of face using landmarks
-                        const landmarks = detection.landmarks.positions;
-                        let centerX = 0, centerY = 0;
-                        landmarks.forEach(point => {
-                            centerX += point.x;
-                            centerY += point.y;
+                        console.log('Comparison - Div box (for', file.name, '):', {
+                            faceIndex,
+                            left: faceBox.style.left,
+                            top: faceBox.style.top,
+                            width: faceBox.style.width,
+                            height: faceBox.style.height,
+                            boxX_times_scaleX: boxX * scaleX,
+                            boxY_times_scaleY: boxY * scaleY
                         });
-                        centerX = (centerX / landmarks.length) * scaleX;
-                        centerY = (centerY / landmarks.length) * scaleY;
+                        
+                        // Check actual rendered position after appending
+                        wrapper.appendChild(faceBox);
+                        
+                        setTimeout(() => {
+                            const canvasRect = canvas.getBoundingClientRect();
+                            const divRect = faceBox.getBoundingClientRect();
+                            const wrapperRect = wrapper.getBoundingClientRect();
+                            console.log('Actual positions:', {
+                                wrapperTop: wrapperRect.top,
+                                wrapperLeft: wrapperRect.left,
+                                canvasTop: canvasRect.top,
+                                canvasLeft: canvasRect.left,
+                                canvasOffsetFromWrapper: {
+                                    top: canvasRect.top - wrapperRect.top,
+                                    left: canvasRect.left - wrapperRect.left
+                                },
+                                divTop: divRect.top,
+                                divLeft: divRect.left,
+                                offsetFromCanvas: {
+                                    top: divRect.top - canvasRect.top,
+                                    left: divRect.left - canvasRect.left
+                                },
+                                offsetFromWrapper: {
+                                    top: divRect.top - wrapperRect.top,
+                                    left: divRect.left - wrapperRect.left
+                                },
+                                expectedTop: boxY * scaleY,
+                                expectedLeft: boxX * scaleX,
+                                canvasWidth: canvas.width,
+                                canvasHeight: canvas.height,
+                                canvasComputedStyle: window.getComputedStyle(canvas).getPropertyValue('border'),
+                                wrapperComputedStyle: window.getComputedStyle(wrapper).getPropertyValue('padding')
+                            });
+                        }, 100);
+                        
+                        // Calculate center for label
+                        const labelCenterX = centerX * scaleX;
+                        const labelCenterY = centerY * scaleY;
                         
                         const label = document.createElement('div');
                         label.className = 'face-label';
                         label.textContent = `${faceIndex + 1}`;
-                        // Position label at center of face
+                        // Position label at center of face relative to box
                         label.style.position = 'absolute';
-                        label.style.left = (centerX - (box.x * scaleX)) + 'px';
-                        label.style.top = (centerY - (box.y * scaleY) - 12) + 'px';
+                        label.style.left = (labelCenterX - (boxX * scaleX)) + 'px';
+                        label.style.top = (labelCenterY - (boxY * scaleY) - 12) + 'px';
                         label.style.transform = 'translateX(-50%)';
                         faceBox.appendChild(label);
-                        
-                        wrapper.appendChild(faceBox);
                         
                         // Add sunglasses warning if detected
                         if (detection.hasSunglasses) {
                             const sunglassesWarning = document.createElement('div');
                             sunglassesWarning.style.position = 'absolute';
-                            sunglassesWarning.style.left = (box.x * scaleX) + 'px';
-                            sunglassesWarning.style.top = (box.y * scaleY + box.height * scaleY + 5) + 'px';
+                            sunglassesWarning.style.left = (boxX * scaleX) + 'px';
+                            sunglassesWarning.style.top = ((boxY + boxHeight) * scaleY + 5) + 'px';
                             sunglassesWarning.style.background = '#ff9800';
                             sunglassesWarning.style.color = 'white';
                             sunglassesWarning.style.padding = '3px 8px';
@@ -977,16 +1150,94 @@
 
         document.getElementById('compareBtn').addEventListener('click', performComparison);
 
+        // Store comparison results for visual display
+        let comparisonResults = [];
+
+        function updateComparisonVisuals() {
+            const preview = document.getElementById('preview2');
+            if (!preview) return;
+            
+            // Find all wrappers with image indices
+            const allWrappers = preview.querySelectorAll('[data-image-index]');
+            
+            allWrappers.forEach((wrapper) => {
+                const imageIndex = parseInt(wrapper.dataset.imageIndex);
+                
+                // Get face boxes in this wrapper
+                const faceBoxes = wrapper.querySelectorAll('.face-box[data-face-index]');
+                
+                faceBoxes.forEach((faceBox) => {
+                    const faceIndex = parseInt(faceBox.dataset.faceIndex);
+                    
+                    // Find the matching result
+                    const result = comparisonResults.find(r => 
+                        r.imageIndex === imageIndex && r.faceIndex === faceIndex
+                    );
+                    
+                    if (result) {
+                        // Update border color based on match
+                        if (result.similarity >= 85) {
+                            faceBox.style.borderColor = '#4caf50';
+                            faceBox.style.borderWidth = '4px';
+                        } else if (result.similarity >= 70) {
+                            faceBox.style.borderColor = '#8bc34a';
+                            faceBox.style.borderWidth = '4px';
+                        } else if (result.similarity >= 50) {
+                            faceBox.style.borderColor = '#ff9800';
+                            faceBox.style.borderWidth = '4px';
+                        } else {
+                            faceBox.style.borderColor = '#f44336';
+                            faceBox.style.borderWidth = '4px';
+                        }
+                        
+                        // Update the label to show match percentage
+                        const label = faceBox.querySelector('.face-label');
+                        if (label) {
+                            if (result.similarity >= 70) {
+                                label.style.backgroundColor = '#4caf50';
+                            } else if (result.similarity >= 50) {
+                                label.style.backgroundColor = '#ff9800';
+                            } else {
+                                label.style.backgroundColor = '#f44336';
+                            }
+                            label.textContent = `${result.similarity.toFixed(0)}% Match`;
+                            label.style.fontSize = '13px';
+                            label.style.fontWeight = 'bold';
+                        }
+                    }
+                });
+            });
+        }
+
         function performComparison() {
             const resultsDiv = document.getElementById('results');
             resultsDiv.classList.remove('hidden');
             resultsDiv.innerHTML = '<h2>📊 Comparison Results</h2>';
+            
+            // Add color legend
+            const colorLegend = document.createElement('div');
+            colorLegend.style.background = '#f8f9fa';
+            colorLegend.style.padding = '15px';
+            colorLegend.style.borderRadius = '8px';
+            colorLegend.style.marginBottom = '20px';
+            colorLegend.style.fontSize = '0.9em';
+            colorLegend.innerHTML = `
+                <strong>📸 Visual Match Indicators:</strong> Face boxes and labels on comparison photos are color-coded:<br>
+                <div style="margin-top: 8px;">
+                    <span style="display: inline-block; width: 15px; height: 15px; background: #4caf50; border-radius: 3px; margin-right: 5px;"></span> <strong>Green (85-100%):</strong> Very likely match<br>
+                    <span style="display: inline-block; width: 15px; height: 15px; background: #8bc34a; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Light Green (70-84%):</strong> Likely match<br>
+                    <span style="display: inline-block; width: 15px; height: 15px; background: #ff9800; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Orange (50-69%):</strong> Possible match<br>
+                    <span style="display: inline-block; width: 15px; height: 15px; background: #f44336; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Red (&lt;50%):</strong> Unlikely match
+                </div>
+            `;
+            resultsDiv.appendChild(colorLegend);
             
             let matchCount = 0;
             let totalFaces = 0;
             
             // Collect all face comparisons with their scores
             const allComparisons = [];
+            comparisonResults = []; // Reset results
             
             comparisonImages.forEach((comp, imgIndex) => {
                 comp.faces.forEach((face, faceIndex) => {
@@ -1032,6 +1283,7 @@
                     allComparisons.push({
                         fileName: comp.file.name,
                         faceIndex: faceIndex,
+                        imageIndex: imgIndex,
                         similarity: similarity,
                         confidence: confidence,
                         isMatch: isMatch,
@@ -1044,6 +1296,12 @@
             
             // Sort by similarity (highest first)
             allComparisons.sort((a, b) => b.similarity - a.similarity);
+            
+            // Store for visual display update
+            comparisonResults = allComparisons;
+            
+            // Update visual display with results
+            updateComparisonVisuals();
             
             // Display sorted results
             allComparisons.forEach((comp, index) => {
