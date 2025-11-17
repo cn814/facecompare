@@ -111,9 +111,11 @@ async function handleReference(file) {
 
     const box = d.detection.box;
     const ageSuffix = typeof d.age === 'number' ? ` (~${Math.round(d.age)}y)` : '';
-    const labelText = (i === 0
-      ? `Face 1${ageSuffix} (Selected)`
-      : `Face ${i + 1}${ageSuffix}`);
+    const labelText = (
+      i === 0
+        ? `Face 1${ageSuffix} (Selected)`
+        : `Face ${i + 1}${ageSuffix}`
+    );
 
     const div = placeFaceBox(
       wrapper,
@@ -299,9 +301,8 @@ function updateComparisonVisuals(comparisonsArr) {
         else box.style.borderColor = 'var(--danger)';
         const label = box.querySelector('.face-label');
         if (label) {
-          // keep whatever age text is already in label, just update % match
-          const parts = label.textContent.split(' (');
-          const base = parts[0]; // "Face 1 (~27y" or "1 (~27y"
+          const parts = label.textContent.split(' – ');
+          const base = parts[0]; // keep "Face 1 (~27y" etc
           label.textContent = `${base} – ${comp.similarity.toFixed(0)}% Match`;
         }
       }
@@ -356,13 +357,14 @@ function exportMatchSheet() {
     return;
   }
 
-  // Reference face crop
+  // Reference face crop + age
   const refFace = reference.faces[reference.selectedIndex];
   const refBox = refFace.detection.box;
   const refCanvas = reference.canvas;
   const refCrop = cropFaceFromCanvas(refCanvas, refBox, 0.4);
+  const refAge = typeof refFace.age === 'number' ? Math.round(refFace.age) : null;
 
-  // Prepare match crops
+  // Prepare match crops with ages
   const matchCrops = [];
   matches.forEach((m, idx) => {
     const compSet = comparisons[m.imageIndex];
@@ -372,11 +374,14 @@ function exportMatchSheet() {
 
     const box = face.detection.box;
     const faceCrop = cropFaceFromCanvas(compSet.canvas, box, 0.4);
+    const compAge = typeof face.age === 'number' ? Math.round(face.age) : null;
+
     matchCrops.push({
       crop: faceCrop,
       similarity: m.similarity,
       fileName: m.fileName,
-      faceIndex: m.faceIndex
+      faceIndex: m.faceIndex,
+      age: compAge
     });
   });
 
@@ -390,13 +395,13 @@ function exportMatchSheet() {
   const padding = 20;
   const gap = 14;
   const cols = 3;
-  const refAreaHeight = tileSize + 40; // ref tile + label
+  const refAreaHeight = tileSize + 50; // ref tile + labels
 
   const rows = Math.ceil(matchCrops.length / cols);
   const width = padding * 2 + cols * tileSize + (cols - 1) * gap;
   const height =
     padding * 3 + refAreaHeight +
-    rows * (tileSize + 36) +
+    rows * (tileSize + 42) +
     (rows - 1) * gap;
 
   const outCanvas = document.createElement('canvas');
@@ -419,62 +424,82 @@ function exportMatchSheet() {
   const refY = padding * 2 + 10;
   drawCropIntoTile(ctx, refCrop, refX, refY, tileSize, tileSize);
 
+  // Reference labels: "Reference" + optional age
+  ctx.textAlign = 'center';
   ctx.fillStyle = '#9ca3af';
   ctx.font = '14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-  ctx.textAlign = 'center';
   ctx.fillText('Reference', refX + tileSize / 2, refY + tileSize + 18);
 
-  // Draw matched faces grid
-  ctx.textAlign = 'center';
+  if (refAge !== null) {
+    ctx.font = '13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText(`≈ ${refAge}y`, refX + tileSize / 2, refY + tileSize + 34);
+  }
+
+  // Draw matched faces grid with % + age
   matchCrops.forEach((m, idx) => {
     const row = Math.floor(idx / cols);
     const col = idx % cols;
 
     const x = padding + col * (tileSize + gap);
-    const y = padding * 2 + refAreaHeight + row * (tileSize + 36 + gap);
+    const y = padding * 2 + refAreaHeight + row * (tileSize + 42 + gap);
 
     drawCropIntoTile(ctx, m.crop, x, y, tileSize, tileSize);
 
-    const label = `${m.similarity.toFixed(1)}%`;
+    const centerX = x + tileSize / 2;
+    const line1Y = y + tileSize + 16;
+    const line2Y = y + tileSize + 32;
+
+    const labelPercent = `${m.similarity.toFixed(1)}%`;
     ctx.fillStyle = '#e5e7eb';
     ctx.font = '13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
-    ctx.fillText(label, x + tileSize / 2, y + tileSize + 16);
+    ctx.textAlign = 'center';
+    ctx.fillText(labelPercent, centerX, line1Y);
+
+    if (m.age !== null) {
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText(`${m.age}y`, centerX, line2Y);
+    }
   });
 
-// --- EXPORT AS PNG ---
-const pngDataUrl = outCanvas.toDataURL('image/png');
-const link = document.createElement('a');
-link.href = pngDataUrl;
-link.download = 'face_match_sheet.png';
-document.body.appendChild(link);
-link.click();
-link.remove();
+  // --- EXPORT AS PNG ---
+  const pngDataUrl = outCanvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  link.href = pngDataUrl;
+  link.download = 'face_match_sheet.png';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
 
-// --- EXPORT AS PDF ---
-try {
-  const { jsPDF } = window.jspdf;
+  // --- EXPORT AS PDF ---
+  try {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) {
+      console.error('jsPDF not found on window.jspdf; did you include the script tag?');
+      return;
+    }
 
-  const pdf = new jsPDF({
-    orientation: outCanvas.width > outCanvas.height ? 'landscape' : 'portrait',
-    unit: 'pt',
-    format: [outCanvas.width, outCanvas.height]
-  });
+    const pdf = new jsPDF({
+      orientation: outCanvas.width > outCanvas.height ? 'landscape' : 'portrait',
+      unit: 'pt',
+      format: [outCanvas.width, outCanvas.height]
+    });
 
-  pdf.addImage(
-    outCanvas.toDataURL('image/png'),
-    'PNG',
-    0,
-    0,
-    outCanvas.width,
-    outCanvas.height
-  );
+    pdf.addImage(
+      outCanvas.toDataURL('image/png'),
+      'PNG',
+      0,
+      0,
+      outCanvas.width,
+      outCanvas.height
+    );
 
-  pdf.save('face_match_sheet.pdf');
-} catch (err) {
-  console.error('PDF export failed:', err);
-  alert("Couldn't generate PDF — see console.");
+    pdf.save('face_match_sheet.pdf');
+  } catch (err) {
+    console.error('PDF export failed:', err);
+    alert("Couldn't generate PDF — see console.");
+  }
 }
-
 
 function showError(target, message) {
   const e = document.createElement('div');
@@ -511,4 +536,3 @@ document.addEventListener('DOMContentLoaded', () => {
   setupUI();
   boot();
 });
-}
