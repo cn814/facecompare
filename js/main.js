@@ -609,6 +609,70 @@ function fileToImage(file) {
   });
 }
 
+/**
+ * Crop and search a face online
+ * @param {HTMLCanvasElement} canvas - Source canvas
+ * @param {Object} box - Face bounding box
+ * @param {string} photoName - Name of the photo
+ */
+async function searchFaceOnline(canvas, box, photoName) {
+  // Crop the face from the canvas
+  const padding = CONFIG.reverseSearch.cropPadding;
+  const padX = box.width * padding;
+  const padY = box.height * padding;
+
+  let sx = Math.max(0, box.x - padX);
+  let sy = Math.max(0, box.y - padY);
+  let sw = Math.min(canvas.width - sx, box.width + padX * 2);
+  let sh = Math.min(canvas.height - sy, box.height + padY * 2);
+
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = sw;
+  cropCanvas.height = sh;
+  const ctx = cropCanvas.getContext('2d');
+  ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  // Show search menu
+  const menu = createSearchMenu(async function(engine) {
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'loading-toast';
+    loadingMsg.textContent = 'Opening search engines...';
+    document.body.appendChild(loadingMsg);
+
+    try {
+      let engines;
+      if (engine === 'all') {
+        engines = CONFIG.reverseSearch.engines;
+      } else {
+        engines = {
+          google: false,
+          yandex: false,
+          bing: false,
+          tineye: false
+        };
+        engines[engine] = true;
+      }
+
+      const results = await reverseImageSearch(cropCanvas, { engines: engines });
+      
+      loadingMsg.textContent = 'Opened ' + results.success.length + ' search engine' + 
+        (results.success.length !== 1 ? 's' : '');
+      
+      setTimeout(function() {
+        loadingMsg.remove();
+      }, 2000);
+      
+    } catch (err) {
+      loadingMsg.textContent = 'Error: ' + err.message;
+      loadingMsg.style.background = 'var(--danger)';
+      setTimeout(function() {
+        loadingMsg.remove();
+      }, 3000);
+    }
+  });
+
+  document.body.appendChild(menu);
+}
 // Note: You'll need to keep your existing cropFaceFromCanvas, 
 // drawCropIntoTile, and exportMatchSheet functions from before
 
