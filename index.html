@@ -1807,10 +1807,13 @@
                 return;
             }
             
-            // Check for saved dark mode preference
+            // Check for saved dark mode preference, default to dark mode
             const savedDarkMode = localStorage.getItem('darkMode');
-            if (savedDarkMode === 'true') {
+            if (savedDarkMode === null || savedDarkMode === 'true') {
                 document.body.classList.add('dark-mode');
+                if (savedDarkMode === null) {
+                    localStorage.setItem('darkMode', 'true');
+                }
             }
             
             console.log('Initializing face comparison tool...');
