@@ -247,3 +247,8 @@ h1{
   .upload-controls{grid-template-columns:1fr;}
   body{padding:16px;}
 }
+
+#results .btn {
+  margin-top: 6px;
+}
+
