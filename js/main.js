@@ -55,19 +55,27 @@ async function handleReference(file){
   const img = await fileToImage(file);
   reference.image = img;
 
-  const {canvas, ctx, scale} = createCanvasForImage(img, 600, 400);
-  const wrapper = document.createElement('div'); wrapper.style.position='relative'; wrapper.appendChild(canvas);
+  const {canvas, ctx} = createCanvasForImage(img, 600, 400);
+  const wrapper = document.createElement('div');
+  wrapper.style.position='relative';
+  wrapper.style.display='inline-block';
+  wrapper.appendChild(canvas);
   preview1.appendChild(wrapper);
 
-  const detections = await faceService.detectAllFaces(img, {useTiny:true, maxW:800});
-  if(detections.length === 0){ showError(preview1,'No faces detected in this image.'); setDisabledState(); return; }
+  // ⬇️ Detect on the *same canvas* we’re displaying
+  const detections = await faceService.detectAllFaces(canvas, {useTiny:true, maxW:800});
+  if(detections.length === 0){
+    showError(preview1,'No faces detected in this image.');
+    setDisabledState();
+    return;
+  }
 
   detections.forEach((d,i)=>{
     d.hasSunglasses = detectSunglassesFast(img, d.landmarks);
     const box = d.detection.box;
-    const div = placeFaceBox(wrapper, box, scale, i, (i===0? 'Selected':'Click to select'), '#ff9800');
+    const div = placeFaceBox(wrapper, box, i, (i===0? 'Face 1 (Selected)':'Click to select'), '#f59e0b', canvas);
     div.addEventListener('click', ()=>{ selectReferenceFace(i, wrapper); });
-    if(debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks, scale);
+    if(debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
   });
 
   reference.faces = detections;
@@ -87,19 +95,34 @@ async function handleComparisons(files){
   for(const file of files){
     if(!file.type.startsWith('image/')) continue;
     const img = await fileToImage(file);
-    const {canvas, ctx, scale} = createCanvasForImage(img, 500, 400);
-    const wrapper = document.createElement('div'); wrapper.style.position='relative'; wrapper.dataset.fileName = file.name; wrapper.appendChild(canvas);
+    const {canvas, ctx} = createCanvasForImage(img, 500, 400);
+    const wrapper = document.createElement('div');
+    wrapper.style.position='relative';
+    wrapper.style.display='inline-block';
+    wrapper.dataset.fileName = file.name;
+    wrapper.appendChild(canvas);
     preview2.appendChild(wrapper);
 
-    const detections = await faceService.detectAllFaces(img, {useTiny:true, maxW:800});
-    if(detections.length===0){ const err = document.createElement('div'); err.className='error'; err.textContent=`No faces detected in ${file.name}`; wrapper.appendChild(err); }
-    else{
-      detections.forEach((d,i)=>{ d.hasSunglasses = detectSunglassesFast(img, d.landmarks); if(debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks, scale); const box = d.detection.box; placeFaceBox(wrapper, box, scale, i, `${i+1}`, '#ff9800'); });
+    // ⬇️ Detect on THIS canvas
+    const detections = await faceService.detectAllFaces(canvas, {useTiny:true, maxW:800});
+    if(detections.length===0){
+      const err = document.createElement('div');
+      err.className='error';
+      err.textContent=`No faces detected in ${file.name}`;
+      wrapper.appendChild(err);
+    } else {
+      detections.forEach((d,i)=>{
+        d.hasSunglasses = detectSunglassesFast(img, d.landmarks);
+        if(debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
+        const box = d.detection.box;
+        placeFaceBox(wrapper, box, i, `${i+1}`, '#f59e0b', canvas);
+      });
       comparisons.push({file, image:img, faces:detections});
     }
   }
   setDisabledState();
 }
+
 
 async function performComparison(){
   resultsDiv.classList.remove('hidden'); resultsDiv.innerHTML = '<h2>📊 Comparison Results</h2>';
