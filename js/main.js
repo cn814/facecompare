@@ -1,12 +1,10 @@
-// main.js - Main application logic with multi-reference support
+// main.js - Main application logic with multi-reference support and reverse image search
 import { DEBUG, debug, downscaleImageToCanvas } from './utils.js';
 import { faceService } from './face-service.js';
 import { detectSunglassesFast } from './sunglasses.js';
-import { createCanvasForImage, placeFaceBox, drawLandmarksOnCanvas, showProcessing, showError } from './ui.js';
+import { createCanvasForImage, placeFaceBox, drawLandmarksOnCanvas, showProcessing, showError, addSearchButton } from './ui.js';
 import { computeSimilarity, computeMultiReferenceSimilarity, averageDescriptors } from './comparison.js';
-import { CONFIG } from './config.js';
 import { reverseImageSearch, createSearchMenu } from './reverse-search.js';
-import { addSearchButton } from './ui.js';
 import { CONFIG } from './config.js';
 
 // DOM elements
@@ -145,6 +143,71 @@ function setupUI() {
 }
 
 /**
+ * Crop and search a face online
+ * @param {HTMLCanvasElement} canvas - Source canvas
+ * @param {Object} box - Face bounding box
+ * @param {string} photoName - Name of the photo
+ */
+async function searchFaceOnline(canvas, box, photoName) {
+  // Crop the face from the canvas
+  const padding = CONFIG.reverseSearch.cropPadding;
+  const padX = box.width * padding;
+  const padY = box.height * padding;
+
+  let sx = Math.max(0, box.x - padX);
+  let sy = Math.max(0, box.y - padY);
+  let sw = Math.min(canvas.width - sx, box.width + padX * 2);
+  let sh = Math.min(canvas.height - sy, box.height + padY * 2);
+
+  const cropCanvas = document.createElement('canvas');
+  cropCanvas.width = sw;
+  cropCanvas.height = sh;
+  const ctx = cropCanvas.getContext('2d');
+  ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  // Show search menu
+  const menu = createSearchMenu(async function(engine) {
+    const loadingMsg = document.createElement('div');
+    loadingMsg.className = 'loading-toast';
+    loadingMsg.textContent = 'Opening search engines...';
+    document.body.appendChild(loadingMsg);
+
+    try {
+      let engines;
+      if (engine === 'all') {
+        engines = CONFIG.reverseSearch.engines;
+      } else {
+        engines = {
+          google: false,
+          yandex: false,
+          bing: false,
+          tineye: false
+        };
+        engines[engine] = true;
+      }
+
+      const results = await reverseImageSearch(cropCanvas, { engines: engines });
+      
+      loadingMsg.textContent = 'Opened ' + results.success.length + ' search engine' + 
+        (results.success.length !== 1 ? 's' : '');
+      
+      setTimeout(function() {
+        loadingMsg.remove();
+      }, 2000);
+      
+    } catch (err) {
+      loadingMsg.textContent = 'Error: ' + err.message;
+      loadingMsg.style.background = 'var(--danger)';
+      setTimeout(function() {
+        loadingMsg.remove();
+      }, 3000);
+    }
+  });
+
+  document.body.appendChild(menu);
+}
+
+/**
  * Handle multiple reference photos upload
  * @param {Array<File>} files - Array of image files
  */
@@ -211,7 +274,12 @@ async function handleReferencePhotos(files) {
         const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
         const labelText = 'Ref ' + (referencePhotos.length + 1) + '.' + (j + 1) + ageSuffix + sunglassesIndicator;
 
-        placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
+        const faceBox = placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
+        
+        // Add search button
+        addSearchButton(faceBox, function() {
+          searchFaceOnline(canvas, box, file.name);
+        });
         
         if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
       }
@@ -288,12 +356,18 @@ function redrawAllReferences() {
       const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
       const labelText = 'Ref ' + (ref.index + 1) + '.' + (i + 1) + ageSuffix + sunglassesIndicator;
       
-      placeFaceBox(ref.wrapper, box, i, labelText, '#22c55e', ref.canvas, d.quality);
+      const faceBox = placeFaceBox(ref.wrapper, box, i, labelText, '#22c55e', ref.canvas, d.quality);
+      
+      // Re-add search button
+      addSearchButton(faceBox, function() {
+        searchFaceOnline(ref.canvas, box, ref.file.name);
+      });
       
       if (debugToggle.checked) drawLandmarksOnCanvas(ref.canvas, d.landmarks);
     }
   });
 }
+
 /**
  * Handle comparison photos upload
  * @param {Array<File>} files - Array of image files
@@ -346,7 +420,13 @@ async function handleComparisons(files) {
           const box = d.detection.box;
           const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
           const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
-          placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
+          
+          const faceBox = placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
+          
+          // Add search button
+          addSearchButton(faceBox, function() {
+            searchFaceOnline(canvas, box, file.name);
+          });
         }
 
         comparisons.push({ 
@@ -385,7 +465,13 @@ function redrawComparisons() {
       const box = d.detection.box;
       const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
       const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
-      placeFaceBox(comp.wrapper, box, i, (i + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', comp.canvas, d.quality);
+      
+      const faceBox = placeFaceBox(comp.wrapper, box, i, (i + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', comp.canvas, d.quality);
+      
+      // Re-add search button
+      addSearchButton(faceBox, function() {
+        searchFaceOnline(comp.canvas, box, comp.file.name);
+      });
     }
   });
 }
@@ -574,6 +660,218 @@ function updateComparisonVisuals(comparisonsArr) {
     });
   });
 }
+
+/**
+ * Crop a face region from canvas with padding
+ * @param {HTMLCanvasElement} canvas - Source canvas
+ * @param {Object} box - Face bounding box
+ * @param {number} paddingRatio - Padding ratio (0-1)
+ * @returns {HTMLCanvasElement} Cropped canvas
+ */
+function cropFaceFromCanvas(canvas, box, paddingRatio) {
+  paddingRatio = paddingRatio || 0.3;
+  const padX = box.width * paddingRatio;
+  const padY = box.height * paddingRatio;
+
+  let sx = Math.max(0, box.x - padX);
+  let sy = Math.max(0, box.y - padY);
+  let sw = Math.min(canvas.width - sx, box.width + padX * 2);
+  let sh = Math.min(canvas.height - sy, box.height + padY * 2);
+
+  const out = document.createElement('canvas');
+  out.width = sw;
+  out.height = sh;
+
+  const outCtx = out.getContext('2d');
+  outCtx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  return out;
+}
+
+/**
+ * Draw a cropped face into a tile with aspect ratio preservation
+ * @param {CanvasRenderingContext2D} ctx - Destination context
+ * @param {HTMLCanvasElement} cropCanvas - Cropped face canvas
+ * @param {number} x - X position
+ * @param {number} y - Y position
+ * @param {number} tileW - Tile width
+ * @param {number} tileH - Tile height
+ */
+function drawCropIntoTile(ctx, cropCanvas, x, y, tileW, tileH) {
+  const w = cropCanvas.width;
+  const h = cropCanvas.height;
+  const scale = Math.min(tileW / w, tileH / h);
+  const drawW = w * scale;
+  const drawH = h * scale;
+  const offsetX = x + (tileW - drawW) / 2;
+  const offsetY = y + (tileH - drawH) / 2;
+  ctx.drawImage(cropCanvas, 0, 0, w, h, offsetX, offsetY, drawW, drawH);
+}
+
+/**
+ * Export match sheet as PNG and PDF
+ */
+function exportMatchSheet() {
+  if (!referencePhotos || !referencePhotos.length || !referencePhotos[0].faces || !referencePhotos[0].canvas) {
+    alert('No reference faces available.');
+    return;
+  }
+  if (!comparisonResults || !comparisonResults.length) {
+    alert('No comparison results available.');
+    return;
+  }
+
+  const matches = comparisonResults.filter(function(c) { 
+    return c.similarity >= CONFIG.export.matchThreshold; 
+  });
+  
+  if (!matches.length) {
+    alert('No matches with similarity ≥ ' + CONFIG.export.matchThreshold + '%.');
+    return;
+  }
+
+  // Use first reference face for export (could be enhanced to use best quality)
+  const refFace = referencePhotos[0].faces[0];
+  const refBox = refFace.detection.box;
+  const refCanvas = referencePhotos[0].canvas;
+  const refCrop = cropFaceFromCanvas(refCanvas, refBox, 0.4);
+  const refAge = typeof refFace.age === 'number' ? Math.round(refFace.age) : null;
+
+  // Match crops
+  const matchCrops = [];
+  matches.forEach(function(m) {
+    const compSet = comparisons[m.imageIndex];
+    if (!compSet || !compSet.canvas) return;
+    const face = compSet.faces[m.faceIndex];
+    if (!face) return;
+
+    const box = face.detection.box;
+    const faceCrop = cropFaceFromCanvas(compSet.canvas, box, 0.4);
+    const compAge = typeof face.age === 'number' ? Math.round(face.age) : null;
+
+    matchCrops.push({
+      crop: faceCrop,
+      similarity: m.similarity,
+      fileName: m.fileName,
+      faceIndex: m.faceIndex,
+      age: compAge
+    });
+  });
+
+  if (!matchCrops.length) {
+    alert('No valid face crops to export.');
+    return;
+  }
+
+  // Layout
+  const tileSize = CONFIG.export.tileSize;
+  const padding = CONFIG.export.padding;
+  const gap = CONFIG.export.gap;
+  const cols = CONFIG.export.columns;
+  const refAreaHeight = tileSize + 50;
+
+  const rows = Math.ceil(matchCrops.length / cols);
+  const width = padding * 2 + cols * tileSize + (cols - 1) * gap;
+  const height = padding * 3 + refAreaHeight + rows * (tileSize + 42) + (rows - 1) * gap + 40;
+
+  const outCanvas = document.createElement('canvas');
+  outCanvas.width = width;
+  outCanvas.height = height;
+  const ctx = outCanvas.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#020617';
+  ctx.fillRect(0, 0, width, height);
+
+  // Title
+  ctx.fillStyle = '#e5e7eb';
+  ctx.font = '18px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('Face Match Sheet', width / 2, padding + 16);
+
+  // Reference face
+  const refX = padding + (width - 2 * padding - tileSize) / 2;
+  const refY = padding * 2 + 10;
+  drawCropIntoTile(ctx, refCrop, refX, refY, tileSize, tileSize);
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = '14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.fillText('Reference', refX + tileSize / 2, refY + tileSize + 18);
+
+  if (refAge !== null) {
+    ctx.font = '13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.fillText('≈ ' + refAge + 'y', refX + tileSize / 2, refY + tileSize + 34);
+  }
+
+  // Matched faces
+  matchCrops.forEach(function(m, idx) {
+    const row = Math.floor(idx / cols);
+    const col = idx % cols;
+
+    const x = padding + col * (tileSize + gap);
+    const y = padding * 2 + refAreaHeight + row * (tileSize + 42 + gap);
+
+    drawCropIntoTile(ctx, m.crop, x, y, tileSize, tileSize);
+
+    const centerX = x + tileSize / 2;
+    const line1Y = y + tileSize + 16;
+    const line2Y = y + tileSize + 32;
+
+    const labelPercent = m.similarity.toFixed(1) + '%';
+    ctx.fillStyle = '#e5e7eb';
+    ctx.font = '13px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(labelPercent, centerX, line1Y);
+
+    if (m.age !== null) {
+      ctx.fillStyle = '#9ca3af';
+      ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+      ctx.fillText(m.age + 'y', centerX, line2Y);
+    }
+  });
+
+  // Footer
+  ctx.fillStyle = '#6b7280';
+  ctx.font = '11px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(
+    'Generated ' + new Date().toLocaleDateString() + ' • ' + matches.length + ' matches found',
+    width / 2,
+    height - 15
+  );
+
+  // Export PNG
+  const pngDataUrl = outCanvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  link.href = pngDataUrl;
+  link.download = 'face_match_sheet.png';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  // Export PDF
+  try {
+    const jsPDF = window.jspdf ? window.jspdf.jsPDF : null;
+    if (!jsPDF) {
+      console.error('jsPDF not found');
+      return;
+    }
+
+    const pdf = new jsPDF({
+      orientation: outCanvas.width > outCanvas.height ? 'landscape' : 'portrait',
+      unit: 'pt',
+      format: [outCanvas.width, outCanvas.height]
+    });
+
+    pdf.addImage(pngDataUrl, 'PNG', 0, 0, outCanvas.width, outCanvas.height);
+    pdf.save('face_match_sheet.pdf');
+  } catch (err) {
+    console.error('PDF export failed:', err);
+    alert("PNG downloaded successfully. PDF generation failed - see console.");
+  }
+}
+
 /**
  * Clear all data and reset UI
  */
@@ -608,73 +906,6 @@ function fileToImage(file) {
     reader.readAsDataURL(file);
   });
 }
-
-/**
- * Crop and search a face online
- * @param {HTMLCanvasElement} canvas - Source canvas
- * @param {Object} box - Face bounding box
- * @param {string} photoName - Name of the photo
- */
-async function searchFaceOnline(canvas, box, photoName) {
-  // Crop the face from the canvas
-  const padding = CONFIG.reverseSearch.cropPadding;
-  const padX = box.width * padding;
-  const padY = box.height * padding;
-
-  let sx = Math.max(0, box.x - padX);
-  let sy = Math.max(0, box.y - padY);
-  let sw = Math.min(canvas.width - sx, box.width + padX * 2);
-  let sh = Math.min(canvas.height - sy, box.height + padY * 2);
-
-  const cropCanvas = document.createElement('canvas');
-  cropCanvas.width = sw;
-  cropCanvas.height = sh;
-  const ctx = cropCanvas.getContext('2d');
-  ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
-
-  // Show search menu
-  const menu = createSearchMenu(async function(engine) {
-    const loadingMsg = document.createElement('div');
-    loadingMsg.className = 'loading-toast';
-    loadingMsg.textContent = 'Opening search engines...';
-    document.body.appendChild(loadingMsg);
-
-    try {
-      let engines;
-      if (engine === 'all') {
-        engines = CONFIG.reverseSearch.engines;
-      } else {
-        engines = {
-          google: false,
-          yandex: false,
-          bing: false,
-          tineye: false
-        };
-        engines[engine] = true;
-      }
-
-      const results = await reverseImageSearch(cropCanvas, { engines: engines });
-      
-      loadingMsg.textContent = 'Opened ' + results.success.length + ' search engine' + 
-        (results.success.length !== 1 ? 's' : '');
-      
-      setTimeout(function() {
-        loadingMsg.remove();
-      }, 2000);
-      
-    } catch (err) {
-      loadingMsg.textContent = 'Error: ' + err.message;
-      loadingMsg.style.background = 'var(--danger)';
-      setTimeout(function() {
-        loadingMsg.remove();
-      }, 3000);
-    }
-  });
-
-  document.body.appendChild(menu);
-}
-// Note: You'll need to keep your existing cropFaceFromCanvas, 
-// drawCropIntoTile, and exportMatchSheet functions from before
 
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
