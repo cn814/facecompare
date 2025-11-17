@@ -108,12 +108,18 @@ async function handleReference(file) {
 
   detections.forEach((d, i) => {
     d.hasSunglasses = detectSunglassesFast(img, d.landmarks);
+
     const box = d.detection.box;
+    const ageSuffix = typeof d.age === 'number' ? ` (~${Math.round(d.age)}y)` : '';
+    const labelText = (i === 0
+      ? `Face 1${ageSuffix} (Selected)`
+      : `Face ${i + 1}${ageSuffix}`);
+
     const div = placeFaceBox(
       wrapper,
       box,
       i,
-      (i === 0 ? 'Face 1 (Selected)' : 'Click to select'),
+      labelText,
       '#f59e0b',
       canvas
     );
@@ -135,13 +141,18 @@ function selectReferenceFace(i, wrapper) {
   boxes.forEach((b, idx) => {
     const label = b.querySelector('.face-label');
     if (!label) return;
+    const face = reference.faces[idx];
+    const ageSuffix = face && typeof face.age === 'number'
+      ? ` (~${Math.round(face.age)}y)`
+      : '';
+
     if (idx === i) {
       b.style.borderColor = 'var(--success)';
-      label.textContent = `Face ${idx + 1} (Selected)`;
+      label.textContent = `Face ${idx + 1}${ageSuffix} (Selected)`;
       label.style.background = 'var(--success)';
     } else {
       b.style.borderColor = 'var(--warn)';
-      label.textContent = `Face ${idx + 1}`;
+      label.textContent = `Face ${idx + 1}${ageSuffix}`;
       label.style.background = 'var(--warn)';
     }
   });
@@ -173,7 +184,8 @@ async function handleComparisons(files) {
         d.hasSunglasses = detectSunglassesFast(img, d.landmarks);
         if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
         const box = d.detection.box;
-        placeFaceBox(wrapper, box, i, `${i + 1}`, '#f59e0b', canvas);
+        const ageSuffix = typeof d.age === 'number' ? ` (~${Math.round(d.age)}y)` : '';
+        placeFaceBox(wrapper, box, i, `${i + 1}${ageSuffix}`, '#f59e0b', canvas);
       });
 
       // store canvas & wrapper for export
@@ -191,8 +203,10 @@ async function performComparison() {
   let matches = 0, total = 0;
   if (!reference.faces.length) return;
 
-  const refDescriptor = reference.faces[reference.selectedIndex].descriptor;
-  const refSunglasses = reference.faces[reference.selectedIndex].hasSunglasses;
+  const refFaceSelected = reference.faces[reference.selectedIndex];
+  const refDescriptor = refFaceSelected.descriptor;
+  const refSunglasses = refFaceSelected.hasSunglasses;
+  const refAge = typeof refFaceSelected.age === 'number' ? refFaceSelected.age : null;
 
   comparisons.forEach((comp, imgIndex) => {
     comp.faces.forEach((face, faceIndex) => {
@@ -200,6 +214,8 @@ async function performComparison() {
       const distance = faceapi.euclideanDistance(refDescriptor, face.descriptor);
       const anySunglasses = refSunglasses || face.hasSunglasses;
       const { similarity, confidence, isMatch } = computeSimilarity(distance, anySunglasses);
+      const compAge = typeof face.age === 'number' ? face.age : null;
+
       allComparisons.push({
         fileName: comp.file.name,
         imageIndex: imgIndex,
@@ -209,7 +225,9 @@ async function performComparison() {
         isMatch,
         distance,
         hasSunglasses: face.hasSunglasses,
-        referenceSunglasses: refSunglasses
+        referenceSunglasses: refSunglasses,
+        refAge,
+        compAge
       });
       if (isMatch) matches++;
     });
@@ -234,8 +252,16 @@ async function performComparison() {
     else if (c.similarity >= 70) fill.style.background = 'linear-gradient(90deg,#8bc34a,#6fb03a)';
     else if (c.similarity >= 50) fill.style.background = 'linear-gradient(90deg,#ff9800,#e68a00)';
     else fill.style.background = 'linear-gradient(90deg,var(--danger),#b71c1c)';
+
+    let ageLine = '';
+    if (typeof c.refAge === 'number' || typeof c.compAge === 'number') {
+      const refTxt = typeof c.refAge === 'number' ? `${Math.round(c.refAge)}y` : 'n/a';
+      const compTxt = typeof c.compAge === 'number' ? `${Math.round(c.compAge)}y` : 'n/a';
+      ageLine = `<br>Estimated age (ref / comp): ${refTxt} / ${compTxt}`;
+    }
+
     root.querySelector('.details').innerHTML =
-      `Confidence: <strong>${c.confidence}</strong><br>Distance: ${c.distance.toFixed(3)}`;
+      `Confidence: <strong>${c.confidence}</strong><br>Distance: ${c.distance.toFixed(3)}${ageLine}`;
     resultsDiv.appendChild(node);
   });
 
@@ -272,7 +298,12 @@ function updateComparisonVisuals(comparisonsArr) {
         else if (comp.similarity >= 50) box.style.borderColor = '#ff9800';
         else box.style.borderColor = 'var(--danger)';
         const label = box.querySelector('.face-label');
-        if (label) label.textContent = `${comp.similarity.toFixed(0)}% Match`;
+        if (label) {
+          // keep whatever age text is already in label, just update % match
+          const parts = label.textContent.split(' (');
+          const base = parts[0]; // "Face 1 (~27y" or "1 (~27y"
+          label.textContent = `${base} – ${comp.similarity.toFixed(0)}% Match`;
+        }
       }
     });
   });
