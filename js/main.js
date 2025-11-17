@@ -511,3 +511,4 @@ document.addEventListener('DOMContentLoaded', () => {
   setupUI();
   boot();
 });
+}
