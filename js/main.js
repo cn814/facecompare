@@ -5,6 +5,9 @@ import { detectSunglassesFast } from './sunglasses.js';
 import { createCanvasForImage, placeFaceBox, drawLandmarksOnCanvas, showProcessing, showError } from './ui.js';
 import { computeSimilarity, computeMultiReferenceSimilarity, averageDescriptors } from './comparison.js';
 import { CONFIG } from './config.js';
+import { reverseImageSearch, createSearchMenu } from './reverse-search.js';
+import { addSearchButton } from './ui.js';
+import { CONFIG } from './config.js';
 
 // DOM elements
 const loadingText = document.getElementById('loadingText');
