@@ -13,10 +13,13 @@ export const faceService = {
       onProgress(30, 'Loading tiny face detector...');
       await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
 
-      onProgress(60, 'Loading landmarks...');
+      onProgress(55, 'Loading landmarks...');
       await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
 
-      onProgress(85, 'Loading recognition model...');
+      onProgress(75, 'Loading age & gender model...');
+      await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
+
+      onProgress(90, 'Loading recognition model...');
       await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
 
       this.modelsLoaded = true;
@@ -26,9 +29,8 @@ export const faceService = {
     }
   },
 
-  // Detect on whatever you pass in:
-  // - if it's a canvas, use it directly (keeps coordinates in sync with what you show)
-  // - otherwise, downscale and detect on that
+  // Detect on whatever you pass in (canvas or image).
+  // We attach landmarks, descriptors, and age/gender info.
   async detectAllFaces(input, options = {}) {
     const useTiny = options.useTiny ?? true;
     const detector = useTiny
@@ -37,7 +39,7 @@ export const faceService = {
 
     let detectionInput = input;
 
-    // If it's not already a canvas/video element, downscale to a canvas for performance
+    // If it's not already a canvas/video, downscale to canvas
     if (!(input instanceof HTMLCanvasElement) && !(input instanceof HTMLVideoElement)) {
       detectionInput = downscaleImageToCanvas(
         input,
@@ -49,14 +51,16 @@ export const faceService = {
     let results = await faceapi
       .detectAllFaces(detectionInput, detector)
       .withFaceLandmarks()
+      .withAgeAndGender()          // ⬅️ adds age and gender
       .withFaceDescriptors();
 
-    // If nothing detected and we used tiny, fall back to SSD on original image
+    // Fallback if tiny detector finds nothing
     if (results.length === 0 && useTiny && input !== detectionInput) {
       debug('Fallback to SSD on original image');
       results = await faceapi
         .detectAllFaces(input, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
         .withFaceLandmarks()
+        .withAgeAndGender()
         .withFaceDescriptors();
     }
 
