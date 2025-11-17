@@ -6,6 +6,40 @@
     <title>Face Comparison Tool</title>
     <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
     <style>
+        :root {
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --bg-primary: white;
+            --text-primary: #333;
+            --text-secondary: #666;
+            --text-tertiary: #999;
+            --border-color: #e0e0e0;
+            --upload-border: #667eea;
+            --upload-bg: #f8f9ff;
+            --upload-bg-hover: #f0f2ff;
+            --result-bg: #f8f9fa;
+            --info-bg: #e3f2fd;
+            --info-border: #2196f3;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        body.dark-mode {
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --bg-primary: #2d2d44;
+            --text-primary: #e0e0e0;
+            --text-secondary: #b0b0b0;
+            --text-tertiary: #808080;
+            --border-color: #404050;
+            --upload-border: #667eea;
+            --upload-bg: #353545;
+            --upload-bg-hover: #3d3d4d;
+            --result-bg: #353545;
+            --info-bg: #2a3f5f;
+            --info-border: #4a9eff;
+            --shadow-color: rgba(0, 0, 0, 0.6);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,14 +48,47 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
             min-height: 100vh;
             padding: 20px;
+            transition: background 0.3s ease;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
+        }
+
+        .header-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            background: var(--bg-primary);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1em;
+            box-shadow: 0 4px 10px var(--shadow-color);
+            transition: all 0.3s;
+            color: var(--text-primary);
+            font-weight: 600;
+        }
+
+        .icon-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px var(--shadow-color);
         }
 
         h1 {
@@ -39,18 +106,19 @@
         }
 
         .loading {
-            background: white;
+            background: var(--bg-primary);
             padding: 20px;
             border-radius: 10px;
             text-align: center;
             margin-bottom: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px var(--shadow-color);
+            color: var(--text-primary);
         }
 
         .loading-bar {
             width: 100%;
             height: 8px;
-            background: #e0e0e0;
+            background: var(--border-color);
             border-radius: 4px;
             overflow: hidden;
             margin-top: 10px;
@@ -71,36 +139,36 @@
         }
 
         .upload-box {
-            background: white;
+            background: var(--bg-primary);
             border-radius: 10px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px var(--shadow-color);
         }
 
         .upload-box h2 {
-            color: #333;
+            color: var(--text-primary);
             margin-bottom: 15px;
             font-size: 1.5em;
         }
 
         .upload-box p {
-            color: #666;
+            color: var(--text-secondary);
             margin-bottom: 20px;
         }
 
         .upload-area {
-            border: 3px dashed #667eea;
+            border: 3px dashed var(--upload-border);
             border-radius: 8px;
             padding: 40px 20px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
-            background: #f8f9ff;
+            background: var(--upload-bg);
         }
 
         .upload-area:hover {
             border-color: #764ba2;
-            background: #f0f2ff;
+            background: var(--upload-bg-hover);
         }
 
         .upload-area.has-image {
@@ -138,6 +206,19 @@
             border: 4px solid #4caf50;
             border-radius: 5px;
             box-sizing: border-box;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .face-box:hover {
+            border-color: #45a049;
+            box-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+        }
+
+        .face-box.selected {
+            border-color: #ffc107;
+            border-width: 5px;
+            box-shadow: 0 0 15px rgba(255, 193, 7, 0.7);
         }
 
         .face-label {
@@ -149,6 +230,26 @@
             font-size: 12px;
             font-weight: bold;
             white-space: nowrap;
+        }
+
+        .quality-badge {
+            position: absolute;
+            background: rgba(33, 150, 243, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .age-badge {
+            position: absolute;
+            background: rgba(156, 39, 176, 0.9);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: bold;
         }
 
         .compare-btn {
@@ -175,16 +276,36 @@
             cursor: not-allowed;
         }
 
+        /* Ensure buttons work well in dark mode */
+        body.dark-mode .compare-btn {
+            color: white;
+        }
+
+        .age-toggle {
+            margin-top: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: var(--text-secondary);
+        }
+
+        .age-toggle input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
         .results {
-            background: white;
+            background: var(--bg-primary);
             border-radius: 10px;
             padding: 30px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px var(--shadow-color);
             margin-top: 20px;
         }
 
         .results h2 {
-            color: #333;
+            color: var(--text-primary);
             margin-bottom: 20px;
         }
 
@@ -192,8 +313,16 @@
             padding: 20px;
             margin-bottom: 15px;
             border-radius: 8px;
-            background: #f8f9fa;
+            background: var(--result-bg);
             border-left: 5px solid #667eea;
+        }
+
+        .result-item h3, .result-item h4 {
+            color: var(--text-primary);
+        }
+
+        .result-item p {
+            color: var(--text-secondary);
         }
 
         .result-item.match {
@@ -201,16 +330,23 @@
             border-left-color: #4caf50;
         }
 
+        body.dark-mode .result-item.match {
+            background: #1b3d1f;
+        }
+
         .result-item.no-match {
             background: #ffebee;
             border-left-color: #f44336;
         }
 
+        body.dark-mode .result-item.no-match {
+            background: #3d1f1f;
+        }
+
         .similarity-score {
             font-size: 2em;
             font-weight: bold;
-            color: #667eea;
-            margin: 10px 0;
+            margin: 15px 0;
         }
 
         .similarity-score.match {
@@ -223,31 +359,29 @@
 
         .progress-bar {
             width: 100%;
-            height: 20px;
-            background: #e0e0e0;
-            border-radius: 10px;
+            height: 30px;
+            background: var(--border-color);
+            border-radius: 15px;
             overflow: hidden;
-            margin-top: 10px;
+            margin: 15px 0;
         }
 
         .progress-fill {
             height: 100%;
-            background: linear-gradient(90deg, #667eea, #764ba2);
-            transition: width 0.5s;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-size: 12px;
             font-weight: bold;
+            transition: width 0.5s ease;
         }
 
         .progress-fill.match {
-            background: linear-gradient(90deg, #4caf50, #45a049);
+            background: linear-gradient(90deg, #4caf50, #66bb6a);
         }
 
         .progress-fill.no-match {
-            background: linear-gradient(90deg, #f44336, #da190b);
+            background: linear-gradient(90deg, #f44336, #ef5350);
         }
 
         .error {
@@ -255,17 +389,23 @@
             color: #c62828;
             padding: 15px;
             border-radius: 8px;
-            margin-top: 10px;
-            border-left: 5px solid #f44336;
+            margin: 15px 0;
+            border-left: 4px solid #f44336;
+        }
+
+        body.dark-mode .error {
+            background: #3d1f1f;
+            color: #ff6b6b;
         }
 
         .info {
-            background: #e3f2fd;
-            color: #1565c0;
+            background: var(--info-bg);
+            border-left: 4px solid var(--info-border);
             padding: 15px;
             border-radius: 8px;
-            margin-top: 10px;
-            border-left: 5px solid #2196f3;
+            margin: 15px 0;
+            line-height: 1.6;
+            color: var(--text-secondary);
         }
 
         @media (max-width: 768px) {
@@ -274,840 +414,849 @@
             }
             
             h1 {
-                font-size: 1.8em;
+                font-size: 2em;
             }
         }
 
         .hidden {
             display: none;
         }
+
+        .reference-selector {
+            margin: 15px 0;
+            padding: 15px;
+            background: var(--info-bg);
+            border-radius: 8px;
+            border-left: 4px solid var(--info-border);
+        }
+
+        .reference-selector p {
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+
+        .face-thumbnails {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .face-thumbnail {
+            width: 80px;
+            height: 80px;
+            border: 3px solid var(--border-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            object-fit: cover;
+        }
+
+        .face-thumbnail:hover {
+            border-color: #667eea;
+            transform: scale(1.05);
+        }
+
+        .face-thumbnail.selected {
+            border-color: #ffc107;
+            border-width: 4px;
+            box-shadow: 0 0 10px rgba(255, 193, 7, 0.5);
+        }
+
+        .comparison-canvas-container {
+            position: relative;
+            display: inline-block;
+        }
+
+        .color-legend {
+            background: var(--result-bg);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
+        }
+
+        .color-legend h3 {
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .color-legend div {
+            color: var(--text-secondary);
+            display: flex;
+            align-items: flex-start;
+            margin: 5px 0;
+            line-height: 1.6;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎭 Face Comparison Tool</h1>
-        <p class="subtitle">Compare faces to see if they're the same person • 100% private, runs in your browser</p>
-
-        <div id="loadingStatus" class="loading">
-            <h3>Loading AI Models...</h3>
-            <p id="loadingText">Preparing face detection models</p>
-            <div class="loading-bar">
-                <div id="loadingProgress" class="loading-progress"></div>
+        <div class="header-controls">
+            <div></div>
+            <div class="control-buttons">
+                <button class="icon-btn" onclick="clearAll()" title="Clear all images and results">
+                    🔄 Reset
+                </button>
+                <button class="icon-btn" onclick="toggleDarkMode()" title="Toggle dark mode">
+                    🌓 Theme
+                </button>
             </div>
         </div>
 
-        <div id="mainApp" class="hidden">
-            <div class="upload-section">
-                <div class="upload-box">
-                    <h2>Reference Photo</h2>
-                    <p>Upload the photo you want to compare against</p>
-                    <div class="upload-area" id="uploadArea1" onclick="document.getElementById('fileInput1').click()">
-                        <div id="uploadPrompt1">
-                            <div class="upload-icon">📸</div>
-                            <p><strong>Click to upload</strong> or drag and drop</p>
-                            <p style="font-size: 0.9em; color: #999;">JPG, PNG, GIF, or WebP</p>
-                            <p style="font-size: 0.8em; color: #ff9800; margin-top: 5px;">⚠️ Motion Photos/Live Photos not supported</p>
-                        </div>
-                        <div id="preview1" class="preview-container hidden"></div>
-                    </div>
-                    <input type="file" id="fileInput1" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp">
-                </div>
+        <h1>🔍 Face Comparison Tool</h1>
+        <p class="subtitle">Upload photos to compare faces using advanced AI recognition</p>
+        
+        <div id="loading" class="loading hidden">
+            <p>Loading AI models...</p>
+            <div class="loading-bar">
+                <div class="loading-progress" id="loadingProgress"></div>
+            </div>
+            <p id="loadingStatus" style="margin-top: 10px; font-size: 0.9em; color: var(--text-secondary);"></p>
+        </div>
 
-                <div class="upload-box">
-                    <h2>Comparison Photo(s)</h2>
-                    <p>Upload one or more photos to compare</p>
-                    <div class="upload-area" id="uploadArea2" onclick="document.getElementById('fileInput2').click()">
-                        <div id="uploadPrompt2">
-                            <div class="upload-icon">📷</div>
-                            <p><strong>Click to upload</strong> or drag and drop</p>
-                            <p style="font-size: 0.9em; color: #999;">JPG, PNG, GIF, or WebP • Multiple files OK</p>
-                            <p style="font-size: 0.8em; color: #ff9800; margin-top: 5px;">⚠️ Motion Photos/Live Photos not supported</p>
-                        </div>
-                        <div id="preview2" class="preview-container hidden"></div>
-                    </div>
-                    <input type="file" id="fileInput2" accept="image/jpeg,image/jpg,image/png,image/gif,image/webp" multiple>
+        <div class="upload-section">
+            <div class="upload-box">
+                <h2>📸 Reference Photo</h2>
+                <p>Upload the face you want to use as reference</p>
+                <div class="upload-area" id="referenceUpload" onclick="document.getElementById('referenceInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <p>Click to upload or drag and drop</p>
+                    <small style="color: var(--text-tertiary);">Supports: JPG, PNG, WebP</small>
+                </div>
+                <input type="file" id="referenceInput" accept="image/*" onchange="handleReferenceUpload(event)">
+                
+                <div id="referenceFaceSelector" class="reference-selector hidden">
+                    <p><strong>Multiple faces detected!</strong> Click on a face above or select below:</p>
+                    <div id="faceThumbnails" class="face-thumbnails"></div>
                 </div>
             </div>
 
-            <button id="compareBtn" class="compare-btn" disabled>Upload Photos to Compare</button>
+            <div class="upload-box">
+                <h2>🖼️ Comparison Photos</h2>
+                <p>Upload one or more photos to compare against the reference</p>
+                <div class="upload-area" id="comparisonUpload" onclick="document.getElementById('comparisonInput').click()">
+                    <div class="upload-icon">📁</div>
+                    <p>Click to upload or drag and drop</p>
+                    <small style="color: var(--text-tertiary);">Supports multiple files</small>
+                </div>
+                <input type="file" id="comparisonInput" accept="image/*" multiple onchange="handleComparisonUpload(event)">
+                <div id="comparisonPreviews" style="margin-top: 20px;"></div>
+            </div>
+        </div>
 
-            <div id="results" class="results hidden"></div>
+        <div class="age-toggle">
+            <input type="checkbox" id="ageEstimationToggle">
+            <label for="ageEstimationToggle"><strong>Enable Age Estimation</strong> (may increase processing time)</label>
+        </div>
+
+        <button class="compare-btn" id="compareBtn" onclick="compareFaces()" disabled>
+            🔍 Compare Faces
+        </button>
+
+        <div id="results" class="results hidden">
+            <h2>📊 Comparison Results</h2>
         </div>
     </div>
 
     <script>
         let modelsLoaded = false;
-        let referenceDescriptor = null;
+        let referenceImage = null;
         let referenceFaces = [];
         let selectedReferenceIndex = 0;
-        let referenceImage = null;
         let comparisonImages = [];
+        let comparisonResults = [];
 
-        // Load models
         async function loadModels() {
-            const loadingText = document.getElementById('loadingText');
-            const loadingProgress = document.getElementById('loadingProgress');
+            const loadingDiv = document.getElementById('loading');
+            const progressBar = document.getElementById('loadingProgress');
+            const statusText = document.getElementById('loadingStatus');
+            
+            loadingDiv.classList.remove('hidden');
             
             try {
-                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+                const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
                 
-                loadingText.textContent = 'Loading face detection models...';
-                loadingProgress.style.width = '20%';
-                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-                
-                loadingText.textContent = 'Loading accurate detection model...';
-                loadingProgress.style.width = '40%';
+                // Load face detection models
+                statusText.textContent = 'Loading face detection models...';
+                progressBar.style.width = '20%';
                 await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
                 
-                loadingText.textContent = 'Loading face landmark model...';
-                loadingProgress.style.width = '60%';
+                progressBar.style.width = '40%';
+                await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
+                
+                // Load face recognition model
+                statusText.textContent = 'Loading face recognition model...';
+                progressBar.style.width = '60%';
                 await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
                 
-                loadingText.textContent = 'Loading face recognition model...';
-                loadingProgress.style.width = '80%';
+                progressBar.style.width = '80%';
                 await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
                 
-                loadingProgress.style.width = '100%';
-                loadingText.textContent = 'Ready!';
+                // Load age estimation model
+                statusText.textContent = 'Loading age estimation model...';
+                progressBar.style.width = '90%';
+                await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
+                
+                progressBar.style.width = '100%';
+                statusText.textContent = 'All models loaded successfully!';
                 
                 setTimeout(() => {
-                    document.getElementById('loadingStatus').classList.add('hidden');
-                    document.getElementById('mainApp').classList.remove('hidden');
+                    loadingDiv.classList.add('hidden');
                     modelsLoaded = true;
                 }, 500);
+                
+                console.log('All models loaded successfully');
             } catch (error) {
-                loadingText.innerHTML = `<span style="color: red;">Error loading models: ${error.message}</span><br>Please refresh the page to try again.`;
+                console.error('Error loading models:', error);
+                statusText.textContent = 'Error loading models. Please refresh the page.';
+                statusText.style.color = '#f44336';
             }
         }
 
-        // File input handlers - will be set up in initialize()
         function setupEventListeners() {
-            document.getElementById('fileInput1').addEventListener('change', async (e) => {
-                if (e.target.files.length > 0) {
-                    try {
-                        await handleReferenceImage(e.target.files[0]);
-                    } catch (error) {
-                        console.error('Error handling reference image:', error);
-                        const preview = document.getElementById('preview1');
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'error';
-                        errorDiv.innerHTML = `
-                            <strong>Error:</strong> ${error.message}<br><br>
-                            <strong>Troubleshooting tips:</strong><br>
-                            • Try a different photo<br>
-                            • Use standard formats: JPG, PNG, GIF, WebP<br>
-                            • If using a Motion Photo or Live Photo, export as a regular JPG first<br>
-                            • Try reducing the file size if it's very large
-                        `;
-                        preview.appendChild(errorDiv);
-                    }
+            // Drag and drop for reference
+            const referenceUpload = document.getElementById('referenceUpload');
+            referenceUpload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                referenceUpload.style.borderColor = '#764ba2';
+            });
+            
+            referenceUpload.addEventListener('dragleave', () => {
+                referenceUpload.style.borderColor = '';
+            });
+            
+            referenceUpload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                referenceUpload.style.borderColor = '';
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    handleReferenceUpload({ target: { files: [file] } });
                 }
             });
 
-            document.getElementById('fileInput2').addEventListener('change', async (e) => {
-                if (e.target.files.length > 0) {
-                    try {
-                        await handleComparisonImages(Array.from(e.target.files));
-                    } catch (error) {
-                        console.error('Error handling comparison images:', error);
-                        const preview = document.getElementById('preview2');
-                        const errorDiv = document.createElement('div');
-                        errorDiv.className = 'error';
-                        errorDiv.innerHTML = `
-                            <strong>Error:</strong> ${error.message}<br><br>
-                            <strong>Troubleshooting tips:</strong><br>
-                            • Try different photos<br>
-                            • Use standard formats: JPG, PNG, GIF, WebP<br>
-                            • If using Motion Photos or Live Photos, export as regular JPGs first<br>
-                            • Try reducing file sizes if they're very large
-                        `;
-                        preview.appendChild(errorDiv);
-                    }
+            // Drag and drop for comparison
+            const comparisonUpload = document.getElementById('comparisonUpload');
+            comparisonUpload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                comparisonUpload.style.borderColor = '#764ba2';
+            });
+            
+            comparisonUpload.addEventListener('dragleave', () => {
+                comparisonUpload.style.borderColor = '';
+            });
+            
+            comparisonUpload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                comparisonUpload.style.borderColor = '';
+                const files = Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/'));
+                if (files.length > 0) {
+                    handleComparisonUpload({ target: { files } });
                 }
             });
         }
 
-        async function handleReferenceImage(file) {
-            console.log('Processing reference image:', file.name);
-            const preview = document.getElementById('preview1');
-            const uploadPrompt = document.getElementById('uploadPrompt1');
-            const uploadArea = document.getElementById('uploadArea1');
-            
-            const img = await loadImage(file);
-            referenceImage = img;
-            
-            uploadPrompt.classList.add('hidden');
-            preview.classList.remove('hidden');
-            preview.innerHTML = '';
-            
-            // Create wrapper for canvas and face boxes
-            const canvasWrapper = document.createElement('div');
-            canvasWrapper.style.position = 'relative';
-            canvasWrapper.style.display = 'inline-block';
-            canvasWrapper.style.lineHeight = '0'; // Remove line-height spacing
-            canvasWrapper.style.fontSize = '0'; // Remove font-size spacing
-            
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.style.display = 'block'; // Remove inline spacing
-            canvas.style.margin = '0';
-            canvas.style.padding = '0';
-            
-            // Scale down for display while keeping aspect ratio
-            const maxDisplayWidth = 600;
-            const maxDisplayHeight = 400;
-            let displayWidth = img.width;
-            let displayHeight = img.height;
-            
-            if (img.width > maxDisplayWidth || img.height > maxDisplayHeight) {
-                const widthRatio = maxDisplayWidth / img.width;
-                const heightRatio = maxDisplayHeight / img.height;
-                const scale = Math.min(widthRatio, heightRatio);
-                displayWidth = img.width * scale;
-                displayHeight = img.height * scale;
-            }
-            
-            canvas.width = displayWidth;
-            canvas.height = displayHeight;
-            canvas.style.width = displayWidth + 'px';
-            canvas.style.height = displayHeight + 'px';
-            canvas.style.maxWidth = displayWidth + 'px';
-            canvas.style.maxHeight = displayHeight + 'px';
-            ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
-            
-            canvasWrapper.appendChild(canvas);
-            preview.appendChild(canvasWrapper);
-            uploadArea.classList.add('has-image');
-            
-            // Detect ALL faces (using original image for accuracy)
-            // Try TinyFaceDetector first (more accurate), fall back to SSD if no faces found
-            console.log('Detecting faces in reference image with TinyFaceDetector...');
-            let detections = await faceapi
-                .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ 
-                    inputSize: 416,
-                    scoreThreshold: 0.3  // Lower threshold for more lenient detection
-                }))
-                .withFaceLandmarks()
-                .withFaceDescriptors();
-            
-            // Fallback to SSD MobileNet if TinyFaceDetector found nothing
-            if (detections.length === 0) {
-                console.log('No faces found with TinyFaceDetector, trying SSD MobileNet...');
-                detections = await faceapi
-                    .detectAllFaces(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
-            }
-            
-            console.log('Detected', detections.length, 'face(s) in reference image');
-            
-            if (detections.length > 0) {
-                referenceFaces = detections;
-                selectedReferenceIndex = 0;
-                referenceDescriptor = detections[0].descriptor;
-                
-                // Detect sunglasses in reference faces
-                detections.forEach((detection, index) => {
-                    detection.hasSunglasses = detectSunglasses(img, detection.landmarks);
-                });
-                
-                // Calculate scale factor for drawing boxes and landmarks
-                const scaleX = displayWidth / img.width;
-                const scaleY = displayHeight / img.height;
-                
-                // Draw facial landmarks for all detected faces
-                detections.forEach((detection) => {
-                    drawLandmarks(canvas, detection.landmarks, scaleX, scaleY);
-                });
-                
-                // DEBUG: Draw boxes directly on canvas to verify coordinates
-                detections.forEach((detection) => {
-                    const landmarks = detection.landmarks.positions;
-                    const xs = landmarks.map(p => p.x);
-                    const ys = landmarks.map(p => p.y);
-                    
-                    const faceWidth = Math.max(...xs) - Math.min(...xs);
-                    const faceHeight = Math.max(...ys) - Math.min(...ys);
-                    const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
-                    const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
-                    
-                    const paddingFactor = 1.3;
-                    const boxWidth = faceWidth * paddingFactor;
-                    const boxHeight = faceHeight * paddingFactor;
-                    const boxX = centerX - (boxWidth / 2);
-                    const boxY = centerY - (boxHeight / 2);
-                    
-                    // Draw box on canvas
-                    ctx.strokeStyle = '#00ffff'; // Cyan for debug
-                    ctx.lineWidth = 3;
-                    ctx.strokeRect(boxX * scaleX, boxY * scaleY, boxWidth * scaleX, boxHeight * scaleY);
-                    
-                    console.log('Reference - Debug box (cyan on canvas):', {
-                        boxX: boxX * scaleX,
-                        boxY: boxY * scaleY,
-                        boxWidth: boxWidth * scaleX,
-                        boxHeight: boxHeight * scaleY,
-                        scaleX,
-                        scaleY
-                    });
-                });
-                
-                // Draw all face boxes
-                detections.forEach((detection, index) => {
-                    // Calculate face size and center from landmarks
-                    const landmarks = detection.landmarks.positions;
-                    const xs = landmarks.map(p => p.x);
-                    const ys = landmarks.map(p => p.y);
-                    
-                    // Get face dimensions
-                    const faceWidth = Math.max(...xs) - Math.min(...xs);
-                    const faceHeight = Math.max(...ys) - Math.min(...ys);
-                    
-                    // Calculate center point
-                    const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
-                    const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
-                    
-                    // Create box centered on face with padding
-                    const paddingFactor = 1.3; // 30% larger than face bounds
-                    const boxWidth = faceWidth * paddingFactor;
-                    const boxHeight = faceHeight * paddingFactor;
-                    const boxX = centerX - (boxWidth / 2);
-                    const boxY = centerY - (boxHeight / 2);
-                    
-                    const faceBox = document.createElement('div');
-                    faceBox.className = 'face-box';
-                    faceBox.dataset.index = index;
-                    faceBox.style.left = (boxX * scaleX) + 'px';
-                    faceBox.style.top = (boxY * scaleY) + 'px';
-                    faceBox.style.width = (boxWidth * scaleX) + 'px';
-                    faceBox.style.height = (boxHeight * scaleY) + 'px';
-                    faceBox.style.cursor = 'pointer';
-                    faceBox.style.borderColor = index === 0 ? '#4caf50' : '#ff9800';
-                    
-                    console.log('Reference - Div box (green/orange):', {
-                        left: faceBox.style.left,
-                        top: faceBox.style.top,
-                        width: faceBox.style.width,
-                        height: faceBox.style.height,
-                        boxX_times_scaleX: boxX * scaleX,
-                        boxY_times_scaleY: boxY * scaleY
-                    });
-                    
-                    // Calculate center for label (already have it)
-                    const labelCenterX = centerX * scaleX;
-                    const labelCenterY = centerY * scaleY;
-                    
-                    const label = document.createElement('div');
-                    label.className = 'face-label';
-                    label.style.backgroundColor = index === 0 ? '#4caf50' : '#ff9800';
-                    label.textContent = index === 0 ? `Face ${index + 1} (Selected)` : `Face ${index + 1} - Click to select`;
-                    // Position label at center of face relative to box
-                    label.style.position = 'absolute';
-                    label.style.left = (labelCenterX - (boxX * scaleX)) + 'px';
-                    label.style.top = (labelCenterY - (boxY * scaleY) - 12) + 'px';
-                    label.style.transform = 'translateX(-50%)';
-                    faceBox.appendChild(label);
-                    
-                    // Click to select this face as reference
-                    faceBox.addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        selectReferenceFace(index);
-                    });
-                    
-                    canvasWrapper.appendChild(faceBox);
-                    
-                    // Add sunglasses warning if detected
-                    if (detection.hasSunglasses) {
-                        const sunglassesWarning = document.createElement('div');
-                        sunglassesWarning.style.position = 'absolute';
-                        sunglassesWarning.style.left = (boxX * scaleX) + 'px';
-                        sunglassesWarning.style.top = ((boxY + boxHeight) * scaleY + 5) + 'px';
-                        sunglassesWarning.style.background = '#ff9800';
-                        sunglassesWarning.style.color = 'white';
-                        sunglassesWarning.style.padding = '3px 8px';
-                        sunglassesWarning.style.borderRadius = '3px';
-                        sunglassesWarning.style.fontSize = '11px';
-                        sunglassesWarning.style.fontWeight = 'bold';
-                        sunglassesWarning.textContent = '⚠️ Sunglasses detected';
-                        canvasWrapper.appendChild(sunglassesWarning);
-                    }
-                });
-                
-                if (detections.length > 1) {
-                    const info = document.createElement('div');
-                    info.className = 'info';
-                    info.style.marginTop = '10px';
-                    info.innerHTML = `<strong>${detections.length} faces detected!</strong> Click on a face to select it as the reference.`;
-                    preview.appendChild(info);
-                }
-                
-                // Add landmark legend
-                const legend = document.createElement('div');
-                legend.style.marginTop = '10px';
-                legend.style.fontSize = '0.85em';
-                legend.style.color = '#666';
-                legend.style.padding = '10px';
-                legend.style.background = '#f8f9fa';
-                legend.style.borderRadius = '5px';
-                legend.innerHTML = `
-                    <strong>Facial Landmarks:</strong> 
-                    <span style="color: #FF6B6B;">● Jawline</span> • 
-                    <span style="color: #4ECDC4;">● Eyebrows</span> • 
-                    <span style="color: #45B7D1;">● Nose</span> • 
-                    <span style="color: #FFA07A;">● Eyes</span> • 
-                    <span style="color: #98D8C8;">● Mouth</span>
-                `;
-                preview.appendChild(legend);
-                
-                checkReadyToCompare();
-            } else {
-                showError(preview, 'No faces detected in this image. Please try another photo.');
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        }
+
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all images and results?')) {
+                // Reset all data
+                referenceImage = null;
                 referenceFaces = [];
-                referenceDescriptor = null;
+                selectedReferenceIndex = 0;
+                comparisonImages = [];
+                comparisonResults = [];
+                
+                // Reset UI elements
+                const referenceUpload = document.getElementById('referenceUpload');
+                referenceUpload.classList.remove('has-image');
+                referenceUpload.innerHTML = `
+                    <div class="upload-icon">📁</div>
+                    <p>Click to upload or drag and drop</p>
+                    <small style="color: var(--text-tertiary);">Supports: JPG, PNG, WebP</small>
+                `;
+                
+                const comparisonUpload = document.getElementById('comparisonUpload');
+                comparisonUpload.classList.remove('has-image');
+                comparisonUpload.innerHTML = `
+                    <div class="upload-icon">📁</div>
+                    <p>Click to upload or drag and drop</p>
+                    <small style="color: var(--text-tertiary);">Supports multiple files</small>
+                `;
+                
+                document.getElementById('comparisonPreviews').innerHTML = '';
+                document.getElementById('referenceFaceSelector').classList.add('hidden');
+                document.getElementById('results').classList.add('hidden');
+                document.getElementById('compareBtn').disabled = true;
+                
+                // Reset file inputs
+                document.getElementById('referenceInput').value = '';
+                document.getElementById('comparisonInput').value = '';
             }
         }
 
-        function selectReferenceFace(index) {
-            selectedReferenceIndex = index;
-            referenceDescriptor = referenceFaces[index].descriptor;
+        function calculateFaceQuality(detection) {
+            let qualityScore = 0;
+            let factors = [];
             
-            const preview = document.getElementById('preview1');
-            const faceBoxes = preview.querySelectorAll('.face-box');
+            // Factor 1: Detection confidence (0-30 points)
+            const confidence = detection.detection.score;
+            const confidencePoints = confidence * 30;
+            qualityScore += confidencePoints;
+            factors.push(`Confidence: ${(confidence * 100).toFixed(1)}%`);
             
-            faceBoxes.forEach((box, i) => {
-                const isSelected = i === index;
-                box.style.borderColor = isSelected ? '#4caf50' : '#ff9800';
-                const label = box.querySelector('.face-label');
-                label.style.backgroundColor = isSelected ? '#4caf50' : '#ff9800';
-                label.textContent = isSelected ? `Face ${i + 1} (Selected)` : `Face ${i + 1} - Click to select`;
-            });
-        }
-
-        function drawLandmarks(canvas, landmarks, scaleX = 1, scaleY = 1) {
-            const ctx = canvas.getContext('2d');
+            // Factor 2: Face size (0-30 points)
+            const faceBox = detection.detection.box;
+            const faceArea = faceBox.width * faceBox.height;
+            const imageDimension = faceBox.width; // Approximate
+            const sizeRatio = Math.sqrt(faceArea) / imageDimension;
+            const sizePoints = Math.min(30, sizeRatio * 60);
+            qualityScore += sizePoints;
+            factors.push(`Size: ${faceBox.width.toFixed(0)}x${faceBox.height.toFixed(0)}px`);
             
-            // Draw all 68 landmark points
-            landmarks.positions.forEach((point, index) => {
-                ctx.beginPath();
-                ctx.arc(point.x * scaleX, point.y * scaleY, 2, 0, 2 * Math.PI);
+            // Factor 3: Face alignment/angle (0-40 points)
+            // Using landmarks to assess alignment
+            if (detection.landmarks) {
+                const landmarks = detection.landmarks;
+                const leftEye = landmarks.getLeftEye();
+                const rightEye = landmarks.getRightEye();
                 
-                // Color code different facial features
-                if (index < 17) {
-                    // Jaw line
-                    ctx.fillStyle = '#FF6B6B';
-                } else if (index < 27) {
-                    // Eyebrows
-                    ctx.fillStyle = '#4ECDC4';
-                } else if (index < 36) {
-                    // Nose
-                    ctx.fillStyle = '#45B7D1';
-                } else if (index < 48) {
-                    // Eyes
-                    ctx.fillStyle = '#FFA07A';
-                } else {
-                    // Mouth
-                    ctx.fillStyle = '#98D8C8';
-                }
+                // Calculate eye level difference
+                const leftEyeY = leftEye.reduce((sum, p) => sum + p.y, 0) / leftEye.length;
+                const rightEyeY = rightEye.reduce((sum, p) => sum + p.y, 0) / rightEye.length;
+                const eyeLevelDiff = Math.abs(leftEyeY - rightEyeY);
                 
-                ctx.fill();
-                
-                // Add white outline for visibility
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 1;
-                ctx.stroke();
-            });
-        }
-
-        function detectSunglasses(image, landmarks) {
-            // Create a temporary canvas to analyze the eye region
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            canvas.width = image.width;
-            canvas.height = image.height;
-            ctx.drawImage(image, 0, 0);
+                // More level = better quality
+                const alignmentPoints = Math.max(0, 40 - (eyeLevelDiff / faceBox.height) * 100);
+                qualityScore += alignmentPoints;
+                factors.push(`Alignment: ${alignmentPoints > 30 ? 'Good' : alignmentPoints > 20 ? 'Fair' : 'Poor'}`);
+            }
             
-            // Eye landmarks: 36-41 (left eye), 42-47 (right eye)
-            const leftEyeLandmarks = landmarks.positions.slice(36, 42);
-            const rightEyeLandmarks = landmarks.positions.slice(42, 48);
+            // Normalize to 0-100
+            qualityScore = Math.min(100, Math.max(0, qualityScore));
             
-            // Calculate bounding boxes for eyes
-            const getEyeBox = (eyeLandmarks) => {
-                const xs = eyeLandmarks.map(p => p.x);
-                const ys = eyeLandmarks.map(p => p.y);
-                return {
-                    x: Math.min(...xs),
-                    y: Math.min(...ys),
-                    width: Math.max(...xs) - Math.min(...xs),
-                    height: Math.max(...ys) - Math.min(...ys)
-                };
+            return {
+                score: qualityScore,
+                factors: factors,
+                rating: qualityScore >= 80 ? 'Excellent' : 
+                       qualityScore >= 60 ? 'Good' : 
+                       qualityScore >= 40 ? 'Fair' : 'Poor'
             };
-            
-            const leftEyeBox = getEyeBox(leftEyeLandmarks);
-            const rightEyeBox = getEyeBox(rightEyeLandmarks);
-            
-            // Expand boxes slightly to include sunglasses frames
-            const expandBox = (box, factor = 1.3) => ({
-                x: box.x - (box.width * (factor - 1) / 2),
-                y: box.y - (box.height * (factor - 1) / 2),
-                width: box.width * factor,
-                height: box.height * factor
-            });
-            
-            const leftExpanded = expandBox(leftEyeBox);
-            const rightExpanded = expandBox(rightEyeBox);
-            
-            // Sample pixels from eye regions
-            const sampleRegion = (box) => {
-                const imageData = ctx.getImageData(box.x, box.y, box.width, box.height);
-                const pixels = imageData.data;
-                let totalBrightness = 0;
-                let darkPixels = 0;
-                const pixelCount = pixels.length / 4;
-                
-                for (let i = 0; i < pixels.length; i += 4) {
-                    const r = pixels[i];
-                    const g = pixels[i + 1];
-                    const b = pixels[i + 2];
-                    const brightness = (r + g + b) / 3;
-                    totalBrightness += brightness;
-                    
-                    // Count very dark pixels (likely sunglasses)
-                    if (brightness < 60) {
-                        darkPixels++;
-                    }
-                }
-                
-                const avgBrightness = totalBrightness / pixelCount;
-                const darkRatio = darkPixels / pixelCount;
-                
-                return { avgBrightness, darkRatio };
-            };
-            
-            const leftEyeData = sampleRegion(leftExpanded);
-            const rightEyeData = sampleRegion(rightExpanded);
-            
-            // Check for sunglasses indicators:
-            // 1. Both eyes are very dark
-            // 2. High percentage of dark pixels
-            // 3. Similar darkness in both eyes (sunglasses tend to be uniform)
-            
-            const avgBrightness = (leftEyeData.avgBrightness + rightEyeData.avgBrightness) / 2;
-            const avgDarkRatio = (leftEyeData.darkRatio + rightEyeData.darkRatio) / 2;
-            const brightnessSimilarity = Math.abs(leftEyeData.avgBrightness - rightEyeData.avgBrightness);
-            
-            // Sunglasses indicators - made much stricter to reduce false positives
-            const veryDark = avgBrightness < 50;  // Changed from 80 to 50 (much darker required)
-            const highDarkRatio = avgDarkRatio > 0.6;  // Changed from 0.4 to 0.6 (more dark pixels required)
-            const uniformAcrossEyes = brightnessSimilarity < 15;  // Changed from 20 to 15 (more uniform required)
-            
-            // Require ALL THREE conditions for sunglasses detection (was using OR)
-            const hasSunglasses = veryDark && highDarkRatio && uniformAcrossEyes;
-            
-            console.log('Sunglasses detection:', {
-                avgBrightness,
-                avgDarkRatio,
-                brightnessSimilarity,
-                veryDark,
-                highDarkRatio,
-                uniformAcrossEyes,
-                hasSunglasses
-            });
-            
-            return hasSunglasses;
         }
 
-        async function handleComparisonImages(files) {
-            console.log('Processing', files.length, 'comparison image(s)');
-            const preview = document.getElementById('preview2');
-            const uploadPrompt = document.getElementById('uploadPrompt2');
-            const uploadArea = document.getElementById('uploadArea2');
+        async function detectFaces(img, enableAge = false) {
+            console.log('Starting face detection...');
+            let detections = [];
             
-            uploadPrompt.classList.add('hidden');
-            preview.classList.remove('hidden');
-            preview.innerHTML = '';
-            uploadArea.classList.add('has-image');
-            
-            comparisonImages = [];
-            
-            for (const file of files) {
-                const img = await loadImage(file);
-                const container = document.createElement('div');
-                container.style.marginBottom = '20px';
+            // Strategy 1: TinyFaceDetector with larger input size for small faces
+            try {
+                console.log('Trying TinyFaceDetector with large input size (608) and threshold 0.3...');
+                const tinyLargeOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 608, scoreThreshold: 0.3 });
                 
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                canvas.style.display = 'block'; // Remove inline spacing
-                canvas.style.margin = '0';
-                canvas.style.padding = '0';
-                
-                // Scale down for display
-                const maxDisplayWidth = 500;
-                const maxDisplayHeight = 400;
-                let displayWidth = img.width;
-                let displayHeight = img.height;
-                
-                if (img.width > maxDisplayWidth || img.height > maxDisplayHeight) {
-                    const widthRatio = maxDisplayWidth / img.width;
-                    const heightRatio = maxDisplayHeight / img.height;
-                    const scale = Math.min(widthRatio, heightRatio);
-                    displayWidth = img.width * scale;
-                    displayHeight = img.height * scale;
-                }
-                
-                canvas.width = displayWidth;
-                canvas.height = displayHeight;
-                canvas.style.width = displayWidth + 'px';
-                canvas.style.height = displayHeight + 'px';
-                canvas.style.maxWidth = displayWidth + 'px';
-                canvas.style.maxHeight = displayHeight + 'px';
-                ctx.drawImage(img, 0, 0, displayWidth, displayHeight);
-                
-                // Detect ALL faces (using original image)
-                // Try TinyFaceDetector first, fall back to SSD if needed
-                console.log('Detecting faces in:', file.name, 'with TinyFaceDetector...');
-                let detections = await faceapi
-                    .detectAllFaces(img, new faceapi.TinyFaceDetectorOptions({ 
-                        inputSize: 416,
-                        scoreThreshold: 0.3
-                    }))
-                    .withFaceLandmarks()
-                    .withFaceDescriptors();
-                
-                if (detections.length === 0) {
-                    console.log('No faces found with TinyFaceDetector, trying SSD MobileNet...');
+                if (enableAge) {
                     detections = await faceapi
-                        .detectAllFaces(img, new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 }))
+                        .detectAllFaces(img, tinyLargeOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors()
+                        .withAgeAndGender();
+                } else {
+                    detections = await faceapi
+                        .detectAllFaces(img, tinyLargeOptions)
                         .withFaceLandmarks()
                         .withFaceDescriptors();
                 }
                 
-                console.log('Detected', detections.length, 'face(s) in', file.name);
+                console.log('TinyFaceDetector (large) found', detections.length, 'faces');
                 
                 if (detections.length > 0) {
-                    // Detect sunglasses in all faces
-                    detections.forEach((detection) => {
-                        detection.hasSunglasses = detectSunglasses(img, detection.landmarks);
+                    return detections;
+                }
+            } catch (error) {
+                console.error('TinyFaceDetector (large) failed:', error);
+            }
+            
+            // Strategy 2: TinyFaceDetector with standard input size
+            try {
+                console.log('Trying TinyFaceDetector with threshold 0.3...');
+                const tinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 512, scoreThreshold: 0.3 });
+                
+                if (enableAge) {
+                    detections = await faceapi
+                        .detectAllFaces(img, tinyOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors()
+                        .withAgeAndGender();
+                } else {
+                    detections = await faceapi
+                        .detectAllFaces(img, tinyOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
+                }
+                
+                console.log('TinyFaceDetector found', detections.length, 'faces');
+                
+                if (detections.length > 0) {
+                    return detections;
+                }
+            } catch (error) {
+                console.error('TinyFaceDetector failed:', error);
+            }
+            
+            // Strategy 3: SSD MobileNet (more accurate, may catch faces TinyFace missed)
+            try {
+                console.log('Trying SSD MobileNet detector...');
+                const ssdOptions = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 });
+                
+                if (enableAge) {
+                    detections = await faceapi
+                        .detectAllFaces(img, ssdOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors()
+                        .withAgeAndGender();
+                } else {
+                    detections = await faceapi
+                        .detectAllFaces(img, ssdOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
+                }
+                
+                console.log('SSD MobileNet found', detections.length, 'faces');
+                
+                if (detections.length > 0) {
+                    return detections;
+                }
+            } catch (error) {
+                console.error('SSD MobileNet failed:', error);
+            }
+            
+            // Strategy 4: Even more sensitive TinyFaceDetector
+            try {
+                console.log('Trying TinyFaceDetector with very low threshold 0.2...');
+                const veryTinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.2 });
+                
+                if (enableAge) {
+                    detections = await faceapi
+                        .detectAllFaces(img, veryTinyOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors()
+                        .withAgeAndGender();
+                } else {
+                    detections = await faceapi
+                        .detectAllFaces(img, veryTinyOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
+                }
+                
+                console.log('Very sensitive TinyFaceDetector found', detections.length, 'faces');
+                
+                if (detections.length > 0) {
+                    return detections;
+                }
+            } catch (error) {
+                console.error('Very sensitive TinyFaceDetector failed:', error);
+            }
+            
+            // Strategy 5: Ultra-sensitive last attempt
+            try {
+                console.log('Trying ultra-sensitive TinyFaceDetector with threshold 0.15...');
+                const ultraTinyOptions = new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.15 });
+                
+                if (enableAge) {
+                    detections = await faceapi
+                        .detectAllFaces(img, ultraTinyOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors()
+                        .withAgeAndGender();
+                } else {
+                    detections = await faceapi
+                        .detectAllFaces(img, ultraTinyOptions)
+                        .withFaceLandmarks()
+                        .withFaceDescriptors();
+                }
+                
+                console.log('Ultra-sensitive TinyFaceDetector found', detections.length, 'faces');
+                
+                if (detections.length > 0) {
+                    return detections;
+                }
+            } catch (error) {
+                console.error('Ultra-sensitive TinyFaceDetector failed:', error);
+            }
+            
+            console.log('No faces detected with any method');
+            return detections;
+        }
+
+        async function handleReferenceUpload(event) {
+            if (!modelsLoaded) {
+                alert('Please wait for the AI models to load first.');
+                return;
+            }
+
+            const file = event.target.files[0];
+            if (!file) {
+                console.log('No file selected');
+                return;
+            }
+
+            console.log('Reference upload started:', file.name);
+            const uploadArea = document.getElementById('referenceUpload');
+            uploadArea.innerHTML = '<p>Processing image...</p>';
+
+            try {
+                console.log('Loading image...');
+                const img = await loadImage(file);
+                console.log('Image loaded, dimensions:', img.width, 'x', img.height);
+                referenceImage = img;
+
+                const enableAge = document.getElementById('ageEstimationToggle').checked;
+                console.log('Age estimation enabled:', enableAge);
+                
+                const detections = await detectFaces(img, enableAge);
+
+                if (detections.length === 0) {
+                    throw new Error('No faces detected in the reference image. Please try a different photo with a clear, front-facing view of a face.');
+                }
+
+                // Calculate quality scores for all detected faces
+                detections.forEach(detection => {
+                    detection.quality = calculateFaceQuality(detection);
+                });
+
+                referenceFaces = detections;
+                selectedReferenceIndex = 0;
+
+                displayReferenceImage(img, detections);
+                updateCompareButton();
+
+            } catch (error) {
+                console.error('Error processing reference image:', error);
+                uploadArea.innerHTML = `
+                    <div class="upload-icon">📁</div>
+                    <p>Click to upload or drag and drop</p>
+                    <small style="color: var(--text-tertiary);">Supports: JPG, PNG, WebP</small>
+                `;
+                showError(uploadArea, error.message || 'An error occurred while processing the image. Please try again.');
+            }
+        }
+
+        function displayReferenceImage(img, detections) {
+            const uploadArea = document.getElementById('referenceUpload');
+            uploadArea.classList.add('has-image');
+            uploadArea.innerHTML = '';
+
+            const container = document.createElement('div');
+            container.className = 'preview-container';
+
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+
+            // Draw face boxes and labels
+            detections.forEach((detection, index) => {
+                const box = detection.detection.box;
+                
+                // Draw rectangle
+                ctx.strokeStyle = index === selectedReferenceIndex ? '#ffc107' : '#4caf50';
+                ctx.lineWidth = index === selectedReferenceIndex ? 10 : 8;
+                ctx.strokeRect(box.x, box.y, box.width, box.height);
+                
+                // Face number label
+                ctx.fillStyle = index === selectedReferenceIndex ? '#ffc107' : '#4caf50';
+                ctx.fillRect(box.x, box.y - 70, 220, 70);
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 36px Arial';
+                ctx.fillText(`Face ${index + 1}`, box.x + 15, box.y - 24);
+                
+                // Quality score
+                const quality = detection.quality;
+                const qColor = quality.score >= 80 ? '#4caf50' : 
+                              quality.score >= 60 ? '#ff9800' : '#f44336';
+                ctx.fillStyle = qColor;
+                ctx.fillRect(box.x, box.y + box.height, 320, 70);
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 32px Arial';
+                ctx.fillText(`Quality: ${quality.score.toFixed(0)}%`, box.x + 15, box.y + box.height + 48);
+                
+                // Age estimation
+                if (detection.age) {
+                    ctx.fillStyle = '#9c27b0';
+                    ctx.fillRect(box.x + 330, box.y + box.height, 240, 70);
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 32px Arial';
+                    ctx.fillText(`Age: ~${Math.round(detection.age)}`, box.x + 345, box.y + box.height + 48);
+                }
+            });
+
+            container.appendChild(canvas);
+            uploadArea.appendChild(container);
+
+            // Show face selector if multiple faces
+            if (detections.length > 1) {
+                showFaceSelector(img, detections);
+            } else {
+                document.getElementById('referenceFaceSelector').classList.add('hidden');
+            }
+        }
+
+        function showFaceSelector(img, detections) {
+            const selectorDiv = document.getElementById('referenceFaceSelector');
+            const thumbnailsDiv = document.getElementById('faceThumbnails');
+            
+            selectorDiv.classList.remove('hidden');
+            thumbnailsDiv.innerHTML = '';
+
+            detections.forEach((detection, index) => {
+                const canvas = document.createElement('canvas');
+                const box = detection.detection.box;
+                
+                // Add some padding around the face
+                const padding = 20;
+                const sx = Math.max(0, box.x - padding);
+                const sy = Math.max(0, box.y - padding);
+                const sw = Math.min(img.width - sx, box.width + padding * 2);
+                const sh = Math.min(img.height - sy, box.height + padding * 2);
+                
+                canvas.width = sw;
+                canvas.height = sh;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, sx, sy, sw, sh, 0, 0, sw, sh);
+                
+                canvas.className = 'face-thumbnail';
+                if (index === selectedReferenceIndex) {
+                    canvas.classList.add('selected');
+                }
+                
+                canvas.onclick = () => selectReferenceFace(index);
+                canvas.title = `Face ${index + 1} - Quality: ${detection.quality.score.toFixed(0)}%`;
+                
+                thumbnailsDiv.appendChild(canvas);
+            });
+        }
+
+        function selectReferenceFace(index) {
+            selectedReferenceIndex = index;
+            displayReferenceImage(referenceImage, referenceFaces);
+            
+            // If comparison has been done, update results with new reference face
+            if (comparisonImages.length > 0 && comparisonImages.some(img => img.faces.length > 0)) {
+                compareFaces();
+            }
+        }
+
+        async function handleComparisonUpload(event) {
+            if (!modelsLoaded) {
+                alert('Please wait for the AI models to load first.');
+                return;
+            }
+
+            const files = Array.from(event.target.files);
+            if (files.length === 0) return;
+
+            const previewsDiv = document.getElementById('comparisonPreviews');
+            previewsDiv.innerHTML = '<p>Processing images...</p>';
+
+            try {
+                comparisonImages = [];
+
+                for (const file of files) {
+                    const img = await loadImage(file);
+                    
+                    const enableAge = document.getElementById('ageEstimationToggle').checked;
+                    const detections = await detectFaces(img, enableAge);
+
+                    // Calculate quality scores
+                    detections.forEach(detection => {
+                        detection.quality = calculateFaceQuality(detection);
                     });
-                    
-                    const currentImageIndex = comparisonImages.length; // Store before push
-                    
+
                     comparisonImages.push({
                         file: file,
                         image: img,
-                        faces: detections
+                        faces: detections.map(d => ({
+                            descriptor: d.descriptor,
+                            box: d.detection.box,
+                            score: d.detection.score,
+                            quality: d.quality,
+                            age: d.age,
+                            gender: d.gender
+                        }))
                     });
-                    
-                    const wrapper = document.createElement('div');
-                    wrapper.style.position = 'relative';
-                    wrapper.style.display = 'inline-block';
-                    wrapper.style.lineHeight = '0'; // Remove line-height spacing
-                    wrapper.style.fontSize = '0'; // Remove font-size spacing
-                    wrapper.dataset.imageIndex = currentImageIndex;
-                    wrapper.appendChild(canvas);
-                    
-                    // Calculate scale factor for drawing boxes and landmarks
-                    const scaleX = displayWidth / img.width;
-                    const scaleY = displayHeight / img.height;
-                    
-                    // Draw facial landmarks for all detected faces
-                    detections.forEach((detection) => {
-                        drawLandmarks(canvas, detection.landmarks, scaleX, scaleY);
-                    });
-                    
-                    // DEBUG: Draw boxes directly on canvas to verify coordinates
-                    detections.forEach((detection, debugIndex) => {
-                        const landmarks = detection.landmarks.positions;
-                        const xs = landmarks.map(p => p.x);
-                        const ys = landmarks.map(p => p.y);
-                        
-                        const faceWidth = Math.max(...xs) - Math.min(...xs);
-                        const faceHeight = Math.max(...ys) - Math.min(...ys);
-                        const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
-                        const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
-                        
-                        const paddingFactor = 1.3;
-                        const boxWidth = faceWidth * paddingFactor;
-                        const boxHeight = faceHeight * paddingFactor;
-                        const boxX = centerX - (boxWidth / 2);
-                        const boxY = centerY - (boxHeight / 2);
-                        
-                        // Draw box on canvas
-                        ctx.strokeStyle = '#00ffff'; // Cyan for debug
-                        ctx.lineWidth = 3;
-                        ctx.strokeRect(boxX * scaleX, boxY * scaleY, boxWidth * scaleX, boxHeight * scaleY);
-                        
-                        console.log('Comparison debug box (CYAN on canvas):', file.name, 'face', debugIndex, {
-                            boxX: boxX * scaleX,
-                            boxY: boxY * scaleY,
-                            boxWidth: boxWidth * scaleX,
-                            boxHeight: boxHeight * scaleY,
-                            canvasBitmapWidth: canvas.width,
-                            canvasBitmapHeight: canvas.height,
-                            canvasCSSWidth: canvas.clientWidth,
-                            canvasCSSHeight: canvas.clientHeight,
-                            scaleMismatch: canvas.width !== canvas.clientWidth || canvas.height !== canvas.clientHeight
-                        });
-                    });
-                    
-                    // Draw all face boxes
-                    detections.forEach((detection, faceIndex) => {
-                        // Calculate face size and center from landmarks
-                        const landmarks = detection.landmarks.positions;
-                        const xs = landmarks.map(p => p.x);
-                        const ys = landmarks.map(p => p.y);
-                        
-                        // Get face dimensions
-                        const faceWidth = Math.max(...xs) - Math.min(...xs);
-                        const faceHeight = Math.max(...ys) - Math.min(...ys);
-                        
-                        // Calculate center point
-                        const centerX = (Math.max(...xs) + Math.min(...xs)) / 2;
-                        const centerY = (Math.max(...ys) + Math.min(...ys)) / 2;
-                        
-                        // Create box centered on face with padding
-                        const paddingFactor = 1.3; // 30% larger than face bounds
-                        const boxWidth = faceWidth * paddingFactor;
-                        const boxHeight = faceHeight * paddingFactor;
-                        const boxX = centerX - (boxWidth / 2);
-                        const boxY = centerY - (boxHeight / 2);
-                        
-                        const faceBox = document.createElement('div');
-                        faceBox.className = 'face-box';
-                        faceBox.dataset.faceIndex = faceIndex;
-                        faceBox.style.left = (boxX * scaleX) + 'px';
-                        faceBox.style.top = (boxY * scaleY) + 'px';
-                        faceBox.style.width = (boxWidth * scaleX) + 'px';
-                        faceBox.style.height = (boxHeight * scaleY) + 'px';
-                        
-                        console.log('Comparison - Div box (for', file.name, '):', {
-                            faceIndex,
-                            left: faceBox.style.left,
-                            top: faceBox.style.top,
-                            width: faceBox.style.width,
-                            height: faceBox.style.height,
-                            boxX_times_scaleX: boxX * scaleX,
-                            boxY_times_scaleY: boxY * scaleY
-                        });
-                        
-                        // Check actual rendered position after appending
-                        wrapper.appendChild(faceBox);
-                        
-                        setTimeout(() => {
-                            const canvasRect = canvas.getBoundingClientRect();
-                            const divRect = faceBox.getBoundingClientRect();
-                            const wrapperRect = wrapper.getBoundingClientRect();
-                            console.log('Actual positions:', {
-                                wrapperTop: wrapperRect.top,
-                                wrapperLeft: wrapperRect.left,
-                                canvasTop: canvasRect.top,
-                                canvasLeft: canvasRect.left,
-                                canvasOffsetFromWrapper: {
-                                    top: canvasRect.top - wrapperRect.top,
-                                    left: canvasRect.left - wrapperRect.left
-                                },
-                                divTop: divRect.top,
-                                divLeft: divRect.left,
-                                offsetFromCanvas: {
-                                    top: divRect.top - canvasRect.top,
-                                    left: divRect.left - canvasRect.left
-                                },
-                                offsetFromWrapper: {
-                                    top: divRect.top - wrapperRect.top,
-                                    left: divRect.left - wrapperRect.left
-                                },
-                                expectedTop: boxY * scaleY,
-                                expectedLeft: boxX * scaleX,
-                                canvasWidth: canvas.width,
-                                canvasHeight: canvas.height,
-                                canvasComputedStyle: window.getComputedStyle(canvas).getPropertyValue('border'),
-                                wrapperComputedStyle: window.getComputedStyle(wrapper).getPropertyValue('padding')
-                            });
-                        }, 100);
-                        
-                        // Calculate center for label
-                        const labelCenterX = centerX * scaleX;
-                        const labelCenterY = centerY * scaleY;
-                        
-                        const label = document.createElement('div');
-                        label.className = 'face-label';
-                        label.textContent = `${faceIndex + 1}`;
-                        // Position label at center of face relative to box
-                        label.style.position = 'absolute';
-                        label.style.left = (labelCenterX - (boxX * scaleX)) + 'px';
-                        label.style.top = (labelCenterY - (boxY * scaleY) - 12) + 'px';
-                        label.style.transform = 'translateX(-50%)';
-                        faceBox.appendChild(label);
-                        
-                        // Add sunglasses warning if detected
-                        if (detection.hasSunglasses) {
-                            const sunglassesWarning = document.createElement('div');
-                            sunglassesWarning.style.position = 'absolute';
-                            sunglassesWarning.style.left = (boxX * scaleX) + 'px';
-                            sunglassesWarning.style.top = ((boxY + boxHeight) * scaleY + 5) + 'px';
-                            sunglassesWarning.style.background = '#ff9800';
-                            sunglassesWarning.style.color = 'white';
-                            sunglassesWarning.style.padding = '3px 8px';
-                            sunglassesWarning.style.borderRadius = '3px';
-                            sunglassesWarning.style.fontSize = '11px';
-                            sunglassesWarning.style.fontWeight = 'bold';
-                            sunglassesWarning.textContent = '⚠️ Sunglasses';
-                            wrapper.appendChild(sunglassesWarning);
-                        }
-                    });
-                    
-                    container.appendChild(wrapper);
-                    
-                    if (detections.length > 1) {
-                        const faceCount = document.createElement('div');
-                        faceCount.style.marginTop = '5px';
-                        faceCount.style.fontSize = '0.9em';
-                        faceCount.style.color = '#666';
-                        faceCount.innerHTML = `<strong>${detections.length} faces detected</strong>`;
-                        container.appendChild(faceCount);
-                    }
-                } else {
-                    container.appendChild(canvas);
-                    const error = document.createElement('div');
-                    error.className = 'error';
-                    error.textContent = `No faces detected in ${file.name}`;
-                    container.appendChild(error);
+                }
+
+                displayComparisonImages();
+                updateCompareButton();
+
+            } catch (error) {
+                console.error('Error processing comparison images:', error);
+                previewsDiv.innerHTML = '';
+                showError(previewsDiv, error.message || 'Error processing some images. Please try again with different files.');
+            }
+        }
+
+        function displayComparisonImages(results = null) {
+            const previewsDiv = document.getElementById('comparisonPreviews');
+            previewsDiv.innerHTML = '';
+
+            comparisonImages.forEach((imgData, imgIndex) => {
+                const container = document.createElement('div');
+                container.style.marginBottom = '20px';
+
+                const title = document.createElement('h4');
+                const faceCountText = imgData.faces.length === 0 ? 
+                    '⚠️ 0 faces - may be too small/distant' : 
+                    `${imgData.faces.length} face${imgData.faces.length !== 1 ? 's' : ''}`;
+                title.textContent = `${imgData.file.name} (${faceCountText})`;
+                title.style.color = imgData.faces.length === 0 ? '#f44336' : 'var(--text-primary)';
+                title.style.marginBottom = '10px';
+                container.appendChild(title);
+
+                const canvasContainer = document.createElement('div');
+                canvasContainer.className = 'preview-container comparison-canvas-container';
+
+                const canvas = document.createElement('canvas');
+                canvas.width = imgData.image.width;
+                canvas.height = imgData.image.height;
+                
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(imgData.image, 0, 0);
+
+                // Draw face boxes or "no faces" message
+                if (imgData.faces.length === 0) {
+                    // Draw a warning overlay when no faces detected
+                    ctx.fillStyle = 'rgba(244, 67, 54, 0.8)';
+                    ctx.fillRect(10, 10, canvas.width - 20, 160);
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 40px Arial';
+                    ctx.fillText('⚠️ No faces detected in this image', 50, 80);
+                    ctx.font = 'bold 30px Arial';
+                    ctx.fillText('Try a photo with larger, clearer faces', 50, 130);
                 }
                 
-                preview.appendChild(container);
-            }
+                imgData.faces.forEach((face, faceIndex) => {
+                    const box = face.box;
+                    
+                    // Determine box color based on match results
+                    let boxColor = '#4caf50'; // Default green
+                    let matchPercentage = null;
+                    
+                    if (results) {
+                        // Find the result for this specific face
+                        const faceResult = results.find(r => 
+                            r.imageIndex === imgIndex && r.faceIndex === faceIndex
+                        );
+                        
+                        if (faceResult) {
+                            matchPercentage = faceResult.similarity;
+                            // Color code based on similarity
+                            if (matchPercentage >= 85) {
+                                boxColor = '#4caf50'; // Green - Very likely match
+                            } else if (matchPercentage >= 70) {
+                                boxColor = '#8bc34a'; // Light green - Likely match
+                            } else if (matchPercentage >= 50) {
+                                boxColor = '#ffc107'; // Yellow - Possible match
+                            } else {
+                                boxColor = '#f44336'; // Red - Unlikely match
+                            }
+                        }
+                    }
+                    
+                    ctx.strokeStyle = boxColor;
+                    ctx.lineWidth = 8;
+                    ctx.strokeRect(box.x, box.y, box.width, box.height);
+                    
+                    // Face number
+                    ctx.fillStyle = boxColor;
+                    ctx.fillRect(box.x, box.y - 70, 220, 70);
+                    ctx.fillStyle = 'white';
+                    ctx.font = 'bold 36px Arial';
+                    ctx.fillText(`Face ${faceIndex + 1}`, box.x + 15, box.y - 24);
+                    
+                    // Show match percentage if available
+                    if (matchPercentage !== null) {
+                        ctx.fillStyle = boxColor;
+                        ctx.fillRect(box.x, box.y + box.height, 320, 70);
+                        ctx.fillStyle = 'white';
+                        ctx.font = 'bold 32px Arial';
+                        ctx.fillText(`Match: ${matchPercentage.toFixed(1)}%`, box.x + 15, box.y + box.height + 48);
+                    } else {
+                        // Quality score (when no match results yet)
+                        const quality = face.quality;
+                        const qColor = quality.score >= 80 ? '#4caf50' : 
+                                      quality.score >= 60 ? '#ff9800' : '#f44336';
+                        ctx.fillStyle = qColor;
+                        ctx.fillRect(box.x, box.y + box.height, 320, 70);
+                        ctx.fillStyle = 'white';
+                        ctx.font = 'bold 32px Arial';
+                        ctx.fillText(`Quality: ${quality.score.toFixed(0)}%`, box.x + 15, box.y + box.height + 48);
+                    }
+                    
+                    // Age estimation (only show if no match percentage or alongside it)
+                    if (face.age && matchPercentage === null) {
+                        ctx.fillStyle = '#9c27b0';
+                        ctx.fillRect(box.x + 330, box.y + box.height, 240, 70);
+                        ctx.fillStyle = 'white';
+                        ctx.font = 'bold 32px Arial';
+                        ctx.fillText(`Age: ~${Math.round(face.age)}`, box.x + 345, box.y + box.height + 48);
+                    } else if (face.age && matchPercentage !== null) {
+                        // Show age next to match percentage
+                        ctx.fillStyle = '#9c27b0';
+                        ctx.fillRect(box.x + 330, box.y + box.height, 240, 70);
+                        ctx.fillStyle = 'white';
+                        ctx.font = 'bold 32px Arial';
+                        ctx.fillText(`Age: ~${Math.round(face.age)}`, box.x + 345, box.y + box.height + 48);
+                    }
+                });
+
+                canvasContainer.appendChild(canvas);
+                container.appendChild(canvasContainer);
+                previewsDiv.appendChild(container);
+            });
+
+            const uploadArea = document.getElementById('comparisonUpload');
+            uploadArea.classList.add('has-image');
+            uploadArea.style.display = 'none';
+        }
+
+        function updateCompareButton() {
+            const btn = document.getElementById('compareBtn');
+            const hasReferenceFace = referenceFaces.length > 0;
+            const hasComparisonImages = comparisonImages.length > 0;
+            const hasComparisonFaces = comparisonImages.some(img => img.faces.length > 0);
             
-            // Add landmark legend if any faces were detected
-            if (comparisonImages.length > 0) {
-                const legend = document.createElement('div');
-                legend.style.marginTop = '15px';
-                legend.style.fontSize = '0.85em';
-                legend.style.color = '#666';
-                legend.style.padding = '10px';
-                legend.style.background = '#f8f9fa';
-                legend.style.borderRadius = '5px';
-                legend.innerHTML = `
-                    <strong>Facial Landmarks:</strong> 
-                    <span style="color: #FF6B6B;">● Jawline</span> • 
-                    <span style="color: #4ECDC4;">● Eyebrows</span> • 
-                    <span style="color: #45B7D1;">● Nose</span> • 
-                    <span style="color: #FFA07A;">● Eyes</span> • 
-                    <span style="color: #98D8C8;">● Mouth</span>
-                `;
-                preview.appendChild(legend);
-            }
+            btn.disabled = !(hasReferenceFace && hasComparisonImages && hasComparisonFaces);
             
-            checkReadyToCompare();
+            // Update button text with helpful message
+            if (hasReferenceFace && hasComparisonImages && !hasComparisonFaces) {
+                btn.textContent = '⚠️ No faces detected in comparison photos';
+                btn.style.opacity = '0.7';
+            } else {
+                btn.textContent = '🔍 Compare Faces';
+                btn.style.opacity = '';
+            }
         }
 
         function loadImage(file) {
             return new Promise((resolve, reject) => {
-                console.log('Loading image file:', file.name, 'Type:', file.type, 'Size:', file.size, 'bytes');
-                
-                // Check if it's an image file
-                if (!file.type.startsWith('image/')) {
-                    reject(new Error(`File type not supported: ${file.type}. Please use JPG, PNG, or other standard image formats.`));
+                // Validate file
+                if (!file) {
+                    reject(new Error('No file provided'));
                     return;
                 }
+                
+                if (!file.type || !file.type.startsWith('image/')) {
+                    reject(new Error('File must be an image (JPG, PNG, or WebP)'));
+                    return;
+                }
+                
+                console.log('Loading image:', file.name, 'Type:', file.type, 'Size:', file.size);
                 
                 const reader = new FileReader();
                 
@@ -1115,292 +1264,532 @@
                     const img = new Image();
                     
                     img.onload = () => {
-                        console.log('✓ Image loaded successfully:', file.name, 'Dimensions:', img.width, 'x', img.height);
+                        console.log('Image loaded successfully:', file.name, 'Dimensions:', img.width, 'x', img.height);
                         resolve(img);
                     };
                     
                     img.onerror = (err) => {
-                        console.error('✗ Image decode error for:', file.name, err);
-                        reject(new Error(`Failed to decode image: ${file.name}. The file may be corrupted.`));
+                        console.error('Image load error:', err);
+                        reject(new Error('Failed to load image. The file may be corrupted or in an unsupported format.'));
                     };
                     
                     img.src = e.target.result;
                 };
                 
                 reader.onerror = (err) => {
-                    console.error('✗ FileReader error:', err);
-                    reject(new Error(`Failed to read file: ${file.name}`));
+                    console.error('FileReader error:', err);
+                    reject(new Error('Failed to read the image file. Please try a different file.'));
                 };
                 
                 reader.readAsDataURL(file);
             });
         }
 
-        function checkReadyToCompare() {
-            const btn = document.getElementById('compareBtn');
-            if (referenceDescriptor && comparisonImages.length > 0) {
-                btn.disabled = false;
-                const totalFaces = comparisonImages.reduce((sum, img) => sum + img.faces.length, 0);
-                btn.textContent = `Compare Against ${totalFaces} Face${totalFaces > 1 ? 's' : ''}`;
-            } else {
-                btn.disabled = true;
-                btn.textContent = 'Upload Photos to Compare';
+        async function compareFaces() {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.classList.remove('hidden');
+            resultsDiv.innerHTML = '<h2>📊 Comparison Results</h2><p>Analyzing faces...</p>';
+
+            try {
+                const referenceDescriptor = referenceFaces[selectedReferenceIndex].descriptor;
+                const referenceQuality = referenceFaces[selectedReferenceIndex].quality;
+
+                resultsDiv.innerHTML = '<h2>📊 Comparison Results</h2>';
+
+                // Reference face info
+                const refInfo = document.createElement('div');
+                refInfo.className = 'result-item';
+                refInfo.style.background = 'var(--info-bg)';
+                refInfo.style.borderLeftColor = 'var(--info-border)';
+                
+                let refAgeInfo = '';
+                if (referenceFaces[selectedReferenceIndex].age) {
+                    const age = Math.round(referenceFaces[selectedReferenceIndex].age);
+                    const gender = referenceFaces[selectedReferenceIndex].gender;
+                    refAgeInfo = `<div style="margin-top: 10px; color: var(--text-secondary);">
+                        <strong>Estimated Age:</strong> ~${age} years old<br>
+                        <strong>Detected Gender:</strong> ${gender}
+                    </div>`;
+                }
+                
+                refInfo.innerHTML = `
+                    <h3>Reference Face ${referenceFaces.length > 1 ? `${selectedReferenceIndex + 1}` : ''}</h3>
+                    <p style="margin-top: 10px; color: var(--text-secondary);">
+                        <strong>Quality Score:</strong> ${referenceQuality.score.toFixed(1)}% (${referenceQuality.rating})<br>
+                        <strong>Details:</strong> ${referenceQuality.factors.join(', ')}
+                    </p>
+                    ${refAgeInfo}
+                    <button onclick="exportMatchedFace(-1, ${selectedReferenceIndex}, 100)" 
+                            class="compare-btn" 
+                            style="width: auto; margin-top: 15px; padding: 10px 20px; font-size: 0.9em; background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                        💾 Download Reference Face
+                    </button>
+                `;
+                resultsDiv.appendChild(refInfo);
+
+                // Color legend
+                const colorLegend = document.createElement('div');
+                colorLegend.className = 'color-legend';
+                colorLegend.innerHTML = `
+                    <h3>Match Quality Legend</h3>
+                    <div style="display: flex; flex-direction: column; gap: 5px;">
+                        <span style="display: inline-block; width: 15px; height: 15px; background: #4caf50; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Dark Green (≥85%):</strong> Very likely match<br>
+                        <span style="display: inline-block; width: 15px; height: 15px; background: #8bc34a; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Light Green (70-84%):</strong> Likely match<br>
+                        <span style="display: inline-block; width: 15px; height: 15px; background: #ffc107; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Yellow (50-69%):</strong> Possible match<br>
+                        <span style="display: inline-block; width: 15px; height: 15px; background: #f44336; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Red (<50%):</strong> Unlikely match
+                    </div>
+                    <p style="margin-top: 15px; font-style: italic; color: var(--text-secondary);">
+                        📸 Face boxes in comparison photos are now color-coded to show match likelihood!
+                    </p>
+                `;
+                resultsDiv.appendChild(colorLegend);
+
+                let matchCount = 0;
+                let totalFaces = 0;
+
+                // Process all comparisons
+                const allComparisons = [];
+                comparisonImages.forEach((comp, imgIndex) => {
+                    comp.faces.forEach((face, faceIndex) => {
+                        totalFaces++;
+                        const distance = faceapi.euclideanDistance(referenceDescriptor, face.descriptor);
+                        
+                        let similarity, confidence, isMatch;
+                        if (distance < 0.4) {
+                            similarity = 95 + (0.4 - distance) * 12.5;
+                            confidence = "Very High";
+                            isMatch = true;
+                        } else if (distance < 0.5) {
+                            similarity = 85 + (0.5 - distance) * 100;
+                            confidence = "High";
+                            isMatch = true;
+                        } else if (distance < 0.6) {
+                            similarity = 70 + (0.6 - distance) * 150;
+                            confidence = "Good";
+                            isMatch = true;
+                        } else if (distance < 0.7) {
+                            similarity = 50 + (0.7 - distance) * 200;
+                            confidence = "Moderate";
+                            isMatch = false;
+                        } else {
+                            similarity = Math.max(0, 50 - (distance - 0.7) * 100);
+                            confidence = "Low";
+                            isMatch = false;
+                        }
+                        
+                        similarity = Math.min(100, Math.max(0, similarity));
+                        if (isMatch) matchCount++;
+                        
+                        allComparisons.push({
+                            fileName: comp.file.name,
+                            faceIndex: faceIndex,
+                            imageIndex: imgIndex,
+                            similarity: similarity,
+                            confidence: confidence,
+                            isMatch: isMatch,
+                            distance: distance,
+                            quality: face.quality,
+                            age: face.age,
+                            gender: face.gender
+                        });
+                    });
+                });
+
+                // Sort by similarity
+                allComparisons.sort((a, b) => b.similarity - a.similarity);
+                
+                // Update comparison images with color-coded results
+                displayComparisonImages(allComparisons);
+
+                // Display results
+                allComparisons.forEach((comp, index) => {
+                    let verdictText, verdictIcon;
+                    if (comp.similarity >= 85) {
+                        verdictText = "Very likely the same person";
+                        verdictIcon = "✅";
+                    } else if (comp.similarity >= 70) {
+                        verdictText = "Likely the same person";
+                        verdictIcon = "✅";
+                    } else if (comp.similarity >= 50) {
+                        verdictText = "Possibly the same person";
+                        verdictIcon = "⚠️";
+                    } else {
+                        verdictText = "Likely different people";
+                        verdictIcon = "❌";
+                    }
+
+                    const resultItem = document.createElement('div');
+                    resultItem.className = `result-item ${comp.isMatch ? 'match' : 'no-match'}`;
+
+                    let rankBadge = '';
+                    if (index === 0 && comp.similarity >= 70) {
+                        rankBadge = ' <span style="background: gold; color: #333; padding: 2px 8px; border-radius: 3px; font-size: 0.8em; font-weight: bold;">🏆 BEST MATCH</span>';
+                    }
+
+                    let ageInfo = '';
+                    if (comp.age) {
+                        ageInfo = `<div style="margin: 10px 0; padding: 10px; background: var(--result-bg); border-radius: 5px;">
+                            <strong>📊 Detected Age:</strong> ~${Math.round(comp.age)} years old<br>
+                            <strong>Gender:</strong> ${comp.gender}
+                        </div>`;
+                    }
+
+                    resultItem.innerHTML = `
+                        <h4 style="margin-bottom: 10px;">
+                            #${index + 1}: ${comp.fileName} - Face ${comp.faceIndex + 1}${rankBadge}
+                        </h4>
+                        <div class="similarity-score ${comp.isMatch ? 'match' : 'no-match'}">${comp.similarity.toFixed(1)}% Match</div>
+                        <div style="margin: 5px 0; color: var(--text-secondary);">Confidence: <strong>${comp.confidence}</strong></div>
+                        <div class="progress-bar">
+                            <div class="progress-fill ${comp.isMatch ? 'match' : 'no-match'}" style="width: ${comp.similarity}%">
+                                ${comp.similarity.toFixed(1)}%
+                            </div>
+                        </div>
+                        <div style="margin: 15px 0; padding: 10px; background: var(--result-bg); border-radius: 5px;">
+                            <strong>🎯 Face Quality:</strong> ${comp.quality.score.toFixed(1)}% (${comp.quality.rating})<br>
+                            <small style="color: var(--text-tertiary);">${comp.quality.factors.join(' • ')}</small>
+                        </div>
+                        ${ageInfo}
+                        <p style="margin-top: 15px; color: var(--text-secondary);">
+                            <strong>Verdict:</strong> ${verdictIcon} ${verdictText}
+                        </p>
+                        <p style="margin-top: 10px; font-size: 0.9em; color: var(--text-tertiary);">
+                            Euclidean distance: ${comp.distance.toFixed(3)} (lower = more similar)
+                        </p>
+                        <button onclick="exportMatchedFace(${comp.imageIndex}, ${comp.faceIndex}, ${comp.similarity})" 
+                                class="compare-btn" 
+                                style="width: auto; margin-top: 15px; padding: 10px 20px; font-size: 0.9em; background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);">
+                            💾 Download This Face
+                        </button>
+                    `;
+
+                    resultsDiv.appendChild(resultItem);
+                });
+
+                // Summary
+                const summary = document.createElement('div');
+                summary.className = 'result-item';
+                summary.style.background = 'var(--info-bg)';
+                summary.style.borderLeftColor = 'var(--info-border)';
+                summary.innerHTML = `
+                    <h3>Summary</h3>
+                    <p style="font-size: 1.1em; margin-top: 10px;">
+                        Found <strong>${matchCount} likely match${matchCount !== 1 ? 'es' : ''}</strong> out of <strong>${totalFaces} face${totalFaces !== 1 ? 's' : ''}</strong> analyzed.
+                    </p>
+                    <p style="margin-top: 10px; color: var(--text-secondary);">
+                        Results are sorted by match percentage (highest first).
+                    </p>
+                `;
+                resultsDiv.appendChild(summary);
+
+                // Export options
+                const exportSection = document.createElement('div');
+                exportSection.className = 'result-item';
+                exportSection.style.background = 'var(--result-bg)';
+                exportSection.style.borderLeftColor = '#9c27b0';
+                exportSection.innerHTML = `
+                    <h3>📥 Export Options</h3>
+                    <p style="margin: 15px 0; color: var(--text-secondary);">Download matched faces for further analysis or record-keeping</p>
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 20px;">
+                        <button onclick="exportAllTopMatches(70)" class="compare-btn" style="width: auto; padding: 12px 24px; font-size: 1em;" title="Download all faces with 70% or higher match score">
+                            💾 Export Top Matches (≥70%)
+                        </button>
+                        <button onclick="exportAllTopMatches(85)" class="compare-btn" style="width: auto; padding: 12px 24px; font-size: 1em; background: linear-gradient(135deg, #8bc34a 0%, #4caf50 100%);" title="Download only faces with 85% or higher match score">
+                            💾 Export High Matches (≥85%)
+                        </button>
+                        <button onclick="exportComparisonReport()" class="compare-btn" style="width: auto; padding: 12px 24px; font-size: 1em; background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);" title="Generate a visual report showing reference face and top 5 matches side-by-side">
+                            📊 Export Visual Report
+                        </button>
+                    </div>
+                    <div style="margin-top: 20px; padding: 15px; background: var(--info-bg); border-radius: 8px; border-left: 3px solid #9c27b0;">
+                        <strong>What each option does:</strong><br>
+                        <div style="margin-top: 10px; color: var(--text-secondary); line-height: 1.8;">
+                            • <strong>Top Matches (≥70%)</strong>: Downloads all cropped faces that scored 70% or higher<br>
+                            • <strong>High Matches (≥85%)</strong>: Downloads only the best matches (85%+)<br>
+                            • <strong>Visual Report</strong>: Creates a single image showing reference face + top 5 matches with scores<br>
+                            • <strong>Individual Download</strong>: Use the purple buttons on each result below to download specific faces
+                        </div>
+                    </div>
+                `;
+                resultsDiv.appendChild(exportSection);
+
+                // Info box
+                const info = document.createElement('div');
+                info.className = 'info';
+                info.innerHTML = `
+                    <strong>Understanding the results:</strong><br><br>
+                    <strong>Match Scores:</strong><br>
+                    • 85-100% = Very likely the same person<br>
+                    • 70-84% = Likely the same person<br>
+                    • 50-69% = Possibly the same person<br>
+                    • Below 50% = Likely different people<br><br>
+                    <strong>Face Quality Scores:</strong><br>
+                    • Excellent (80-100%): Optimal for comparison<br>
+                    • Good (60-79%): Reliable for comparison<br>
+                    • Fair (40-59%): May affect accuracy<br>
+                    • Poor (<40%): Use caution with results<br><br>
+                    <strong>What affects accuracy:</strong><br>
+                    • Photo angle and lighting<br>
+                    • Facial expression and age difference<br>
+                    • Image quality and resolution<br>
+                    • Accessories (glasses, hats, makeup)<br><br>
+                    <strong>Tips for better face detection:</strong><br>
+                    • Use photos where faces are clearly visible and not too small/distant<br>
+                    • Front-facing or slightly angled photos work best<br>
+                    • Ensure good lighting and focus<br>
+                    • Avoid heavily cropped or low-resolution images<br><br>
+                    <strong>📥 Export Features:</strong><br>
+                    • Download individual matched faces from each result card<br>
+                    • Export all top matches above a threshold (70% or 85%)<br>
+                    • Generate a visual comparison report with side-by-side faces<br>
+                    • All exports are saved as high-quality PNG images<br><br>
+                    ${referenceFaces.length > 1 ? '<strong>Tip:</strong> Multiple faces detected in reference photo. Select different faces to compare!' : ''}
+                `;
+                resultsDiv.appendChild(info);
+
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+            } catch (error) {
+                console.error('Error comparing faces:', error);
+                resultsDiv.innerHTML = '<h2>📊 Comparison Results</h2>';
+                showError(resultsDiv, error.message || 'Error during comparison. Please try uploading the images again.');
             }
         }
 
-        document.getElementById('compareBtn').addEventListener('click', performComparison);
-
-        // Store comparison results for visual display
-        let comparisonResults = [];
-
-        function updateComparisonVisuals() {
-            const preview = document.getElementById('preview2');
-            if (!preview) return;
+        function cropFaceFromImage(image, box, padding = 20) {
+            // Create a canvas for the cropped face
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
             
-            // Find all wrappers with image indices
-            const allWrappers = preview.querySelectorAll('[data-image-index]');
+            // Add padding around the face
+            const x = Math.max(0, box.x - padding);
+            const y = Math.max(0, box.y - padding);
+            const width = Math.min(image.width - x, box.width + padding * 2);
+            const height = Math.min(image.height - y, box.height + padding * 2);
             
-            allWrappers.forEach((wrapper) => {
-                const imageIndex = parseInt(wrapper.dataset.imageIndex);
-                
-                // Get face boxes in this wrapper
-                const faceBoxes = wrapper.querySelectorAll('.face-box[data-face-index]');
-                
-                faceBoxes.forEach((faceBox) => {
-                    const faceIndex = parseInt(faceBox.dataset.faceIndex);
-                    
-                    // Find the matching result
-                    const result = comparisonResults.find(r => 
-                        r.imageIndex === imageIndex && r.faceIndex === faceIndex
-                    );
-                    
-                    if (result) {
-                        // Update border color based on match
-                        if (result.similarity >= 85) {
-                            faceBox.style.borderColor = '#4caf50';
-                            faceBox.style.borderWidth = '4px';
-                        } else if (result.similarity >= 70) {
-                            faceBox.style.borderColor = '#8bc34a';
-                            faceBox.style.borderWidth = '4px';
-                        } else if (result.similarity >= 50) {
-                            faceBox.style.borderColor = '#ff9800';
-                            faceBox.style.borderWidth = '4px';
-                        } else {
-                            faceBox.style.borderColor = '#f44336';
-                            faceBox.style.borderWidth = '4px';
-                        }
-                        
-                        // Update the label to show match percentage
-                        const label = faceBox.querySelector('.face-label');
-                        if (label) {
-                            if (result.similarity >= 70) {
-                                label.style.backgroundColor = '#4caf50';
-                            } else if (result.similarity >= 50) {
-                                label.style.backgroundColor = '#ff9800';
-                            } else {
-                                label.style.backgroundColor = '#f44336';
-                            }
-                            label.textContent = `${result.similarity.toFixed(0)}% Match`;
-                            label.style.fontSize = '13px';
-                            label.style.fontWeight = 'bold';
-                        }
-                    }
-                });
-            });
+            canvas.width = width;
+            canvas.height = height;
+            
+            ctx.drawImage(image, x, y, width, height, 0, 0, width, height);
+            
+            return canvas;
         }
 
-        function performComparison() {
+        function downloadCanvas(canvas, filename) {
+            try {
+                // Convert canvas to data URL (avoids CSP blob URL restrictions)
+                const dataUrl = canvas.toDataURL('image/png');
+                
+                // Create download link
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = filename;
+                
+                // Trigger download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (error) {
+                console.error('Download error:', error);
+                alert('Download failed. Please try again or use a different browser.');
+            }
+        }
+
+        function exportMatchedFace(imageIndex, faceIndex, similarity) {
+            // Handle reference face export
+            if (imageIndex === -1) {
+                const refFace = referenceFaces[faceIndex];
+                const canvas = cropFaceFromImage(referenceImage, refFace.detection.box);
+                const filename = `reference_face${referenceFaces.length > 1 ? `_${faceIndex + 1}` : ''}.png`;
+                downloadCanvas(canvas, filename);
+                return;
+            }
+            
+            const imgData = comparisonImages[imageIndex];
+            const face = imgData.faces[faceIndex];
+            
+            // Crop the face
+            const canvas = cropFaceFromImage(imgData.image, face.box);
+            
+            // Download with descriptive filename
+            const filename = `match_${similarity.toFixed(0)}pct_${imgData.file.name.replace(/\.[^/.]+$/, '')}_face${faceIndex + 1}.png`;
+            downloadCanvas(canvas, filename);
+        }
+
+        function exportAllTopMatches(threshold = 70) {
             const resultsDiv = document.getElementById('results');
-            resultsDiv.classList.remove('hidden');
-            resultsDiv.innerHTML = '<h2>📊 Comparison Results</h2>';
             
-            // Add color legend
-            const colorLegend = document.createElement('div');
-            colorLegend.style.background = '#f8f9fa';
-            colorLegend.style.padding = '15px';
-            colorLegend.style.borderRadius = '8px';
-            colorLegend.style.marginBottom = '20px';
-            colorLegend.style.fontSize = '0.9em';
-            colorLegend.innerHTML = `
-                <strong>📸 Visual Match Indicators:</strong> Face boxes and labels on comparison photos are color-coded:<br>
-                <div style="margin-top: 8px;">
-                    <span style="display: inline-block; width: 15px; height: 15px; background: #4caf50; border-radius: 3px; margin-right: 5px;"></span> <strong>Green (85-100%):</strong> Very likely match<br>
-                    <span style="display: inline-block; width: 15px; height: 15px; background: #8bc34a; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Light Green (70-84%):</strong> Likely match<br>
-                    <span style="display: inline-block; width: 15px; height: 15px; background: #ff9800; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Orange (50-69%):</strong> Possible match<br>
-                    <span style="display: inline-block; width: 15px; height: 15px; background: #f44336; border-radius: 3px; margin-right: 5px; margin-top: 5px;"></span> <strong>Red (&lt;50%):</strong> Unlikely match
-                </div>
-            `;
-            resultsDiv.appendChild(colorLegend);
+            if (!resultsDiv || resultsDiv.classList.contains('hidden')) {
+                alert('Please run a comparison first!');
+                return;
+            }
             
-            let matchCount = 0;
-            let totalFaces = 0;
-            
-            // Collect all face comparisons with their scores
-            const allComparisons = [];
-            comparisonResults = []; // Reset results
-            
+            // Find all matches above threshold
+            const topMatches = [];
             comparisonImages.forEach((comp, imgIndex) => {
                 comp.faces.forEach((face, faceIndex) => {
-                    totalFaces++;
+                    const referenceDescriptor = referenceFaces[selectedReferenceIndex].descriptor;
                     const distance = faceapi.euclideanDistance(referenceDescriptor, face.descriptor);
                     
-                    // Check if either reference or comparison face has sunglasses
-                    const referenceSunglasses = referenceFaces[selectedReferenceIndex].hasSunglasses;
-                    const comparisonSunglasses = face.hasSunglasses;
-                    const anySunglasses = referenceSunglasses || comparisonSunglasses;
-                    
-                    // Adjust thresholds if sunglasses detected (be more lenient)
-                    const thresholdAdjustment = anySunglasses ? 0.1 : 0;
-                    
-                    // More sophisticated scoring with sunglasses adjustment
-                    let similarity, confidence, isMatch;
-                    if (distance < (0.4 + thresholdAdjustment)) {
-                        similarity = 95 + ((0.4 + thresholdAdjustment) - distance) * 12.5;  // 95-100%
-                        confidence = anySunglasses ? "High (sunglasses)" : "Very High";
-                        isMatch = true;
-                    } else if (distance < (0.5 + thresholdAdjustment)) {
-                        similarity = 85 + ((0.5 + thresholdAdjustment) - distance) * 100;  // 85-95%
-                        confidence = anySunglasses ? "Good (sunglasses)" : "High";
-                        isMatch = true;
-                    } else if (distance < (0.6 + thresholdAdjustment)) {
-                        similarity = 70 + ((0.6 + thresholdAdjustment) - distance) * 150;  // 70-85%
-                        confidence = anySunglasses ? "Moderate (sunglasses)" : "Good";
-                        isMatch = true;
-                    } else if (distance < (0.7 + thresholdAdjustment)) {
-                        similarity = 50 + ((0.7 + thresholdAdjustment) - distance) * 200;  // 50-70%
-                        confidence = anySunglasses ? "Low (sunglasses)" : "Moderate";
-                        isMatch = false;
+                    let similarity;
+                    if (distance < 0.4) {
+                        similarity = 95 + (0.4 - distance) * 12.5;
+                    } else if (distance < 0.5) {
+                        similarity = 85 + (0.5 - distance) * 100;
+                    } else if (distance < 0.6) {
+                        similarity = 70 + (0.6 - distance) * 150;
+                    } else if (distance < 0.7) {
+                        similarity = 50 + (0.7 - distance) * 200;
                     } else {
-                        similarity = Math.max(0, 50 - (distance - (0.7 + thresholdAdjustment)) * 100);  // 0-50%
-                        confidence = "Low";
-                        isMatch = false;
+                        similarity = Math.max(0, 50 - (distance - 0.7) * 100);
                     }
-                    
                     similarity = Math.min(100, Math.max(0, similarity));
                     
-                    if (isMatch) matchCount++;
-                    
-                    allComparisons.push({
-                        fileName: comp.file.name,
-                        faceIndex: faceIndex,
-                        imageIndex: imgIndex,
-                        similarity: similarity,
-                        confidence: confidence,
-                        isMatch: isMatch,
-                        distance: distance,
-                        hasSunglasses: comparisonSunglasses,
-                        referenceSunglasses: referenceSunglasses
-                    });
+                    if (similarity >= threshold) {
+                        topMatches.push({ imgIndex, faceIndex, similarity, comp });
+                    }
                 });
             });
             
-            // Sort by similarity (highest first)
-            allComparisons.sort((a, b) => b.similarity - a.similarity);
+            if (topMatches.length === 0) {
+                alert(`No matches found above ${threshold}% threshold.`);
+                return;
+            }
             
-            // Store for visual display update
-            comparisonResults = allComparisons;
-            
-            // Update visual display with results
-            updateComparisonVisuals();
-            
-            // Display sorted results
-            allComparisons.forEach((comp, index) => {
-                let verdictText, verdictIcon;
-                if (comp.similarity >= 85) {
-                    verdictText = "Very likely the same person";
-                    verdictIcon = "✅";
-                } else if (comp.similarity >= 70) {
-                    verdictText = "Likely the same person";
-                    verdictIcon = "✅";
-                } else if (comp.similarity >= 50) {
-                    verdictText = "Possibly the same person";
-                    verdictIcon = "⚠️";
-                } else {
-                    verdictText = "Likely different people";
-                    verdictIcon = "❌";
-                }
-                
-                const resultItem = document.createElement('div');
-                resultItem.className = `result-item ${comp.isMatch ? 'match' : 'no-match'}`;
-                
-                // Add rank badge
-                let rankBadge = '';
-                if (index === 0 && comp.similarity >= 70) {
-                    rankBadge = ' <span style="background: gold; color: #333; padding: 2px 8px; border-radius: 3px; font-size: 0.8em; font-weight: bold;">🏆 BEST MATCH</span>';
-                }
-                
-                // Add sunglasses warning if detected
-                let sunglassesNote = '';
-                if (comp.referenceSunglasses && comp.hasSunglasses) {
-                    sunglassesNote = '<div style="background: #fff3cd; border-left: 3px solid #ff9800; padding: 8px; margin: 10px 0; border-radius: 3px; font-size: 0.9em;">⚠️ <strong>Both faces have sunglasses</strong> - Accuracy may be reduced. Thresholds adjusted to be more lenient.</div>';
-                } else if (comp.referenceSunglasses || comp.hasSunglasses) {
-                    sunglassesNote = '<div style="background: #fff3cd; border-left: 3px solid #ff9800; padding: 8px; margin: 10px 0; border-radius: 3px; font-size: 0.9em;">⚠️ <strong>Sunglasses detected</strong> - Accuracy may be reduced. Thresholds adjusted to be more lenient.</div>';
-                }
-                
-                resultItem.innerHTML = `
-                    <h4 style="margin-bottom: 10px;">
-                        #${index + 1}: ${comp.fileName} - Face ${comp.faceIndex + 1}${rankBadge}
-                    </h4>
-                    ${sunglassesNote}
-                    <div class="similarity-score ${comp.isMatch ? 'match' : 'no-match'}">${comp.similarity.toFixed(1)}% Match</div>
-                    <div style="margin: 5px 0; color: #666;">Confidence: <strong>${comp.confidence}</strong></div>
-                    <div class="progress-bar">
-                        <div class="progress-fill ${comp.isMatch ? 'match' : 'no-match'}" style="width: ${comp.similarity}%">
-                            ${comp.similarity.toFixed(1)}%
-                        </div>
-                    </div>
-                    <p style="margin-top: 15px; color: #666;">
-                        <strong>Verdict:</strong> ${verdictIcon} ${verdictText}
-                    </p>
-                    <p style="margin-top: 10px; font-size: 0.9em; color: #999;">
-                        Euclidean distance: ${comp.distance.toFixed(3)} (lower = more similar)
-                    </p>
-                `;
-                
-                resultsDiv.appendChild(resultItem);
+            // Export each match with a small delay to avoid browser blocking
+            topMatches.forEach((match, index) => {
+                setTimeout(() => {
+                    exportMatchedFace(match.imgIndex, match.faceIndex, match.similarity);
+                }, index * 200);
             });
             
-            // Summary
-            const summary = document.createElement('div');
-            summary.className = 'result-item';
-            summary.style.background = '#f0f7ff';
-            summary.style.borderLeftColor = '#2196f3';
-            summary.innerHTML = `
-                <h3>Summary</h3>
-                <p style="font-size: 1.1em; margin-top: 10px;">
-                    Found <strong>${matchCount} likely match${matchCount !== 1 ? 'es' : ''}</strong> out of <strong>${totalFaces} face${totalFaces !== 1 ? 's' : ''}</strong> analyzed.
-                </p>
-                <p style="margin-top: 10px; color: #666;">
-                    Results are sorted by match percentage (highest first).
-                </p>
-            `;
-            resultsDiv.appendChild(summary);
+            alert(`Exporting ${topMatches.length} matched face${topMatches.length !== 1 ? 's' : ''}...`);
+        }
+
+        function exportComparisonReport() {
+            const resultsDiv = document.getElementById('results');
             
-            // Info box
-            const info = document.createElement('div');
-            info.className = 'info';
-            info.innerHTML = `
-                <strong>Understanding the results:</strong><br>
-                <strong>Score Ranges:</strong><br>
-                • 85-100% = Very likely the same person (Very High Confidence)<br>
-                • 70-84% = Likely the same person (Good-High Confidence)<br>
-                • 50-69% = Possibly the same person (Moderate Confidence)<br>
-                • Below 50% = Likely different people (Low Confidence)<br><br>
-                <strong>What affects accuracy:</strong><br>
-                • Photo angle and lighting<br>
-                • Facial expression and age difference<br>
-                • Image quality and resolution<br>
-                • Accessories (glasses, hats, makeup)<br><br>
-                <strong>Sunglasses Detection:</strong><br>
-                • When sunglasses are detected, matching thresholds are automatically adjusted to be more lenient (+10%)<br>
-                • This compensates for reduced eye region visibility<br>
-                • For best results, use photos without sunglasses when possible<br><br>
-                <strong>Detection:</strong> This tool uses dual AI models (TinyFaceDetector + SSD MobileNet) for maximum reliability.<br>
-                ${referenceFaces.length > 1 ? '<br><strong>Tip:</strong> Multiple faces detected in reference photo. Click on different faces to compare against different people!' : ''}
-            `;
-            resultsDiv.appendChild(info);
+            if (!resultsDiv || resultsDiv.classList.contains('hidden')) {
+                alert('Please run a comparison first!');
+                return;
+            }
             
-            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            // Create a large canvas for the report
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Calculate canvas size
+            const refFace = referenceFaces[selectedReferenceIndex];
+            const refBox = refFace.detection.box;
+            const refCanvas = cropFaceFromImage(referenceImage, refBox, 40);
+            
+            const faceWidth = 300;
+            const faceHeight = 300;
+            const padding = 30;
+            const headerHeight = 120;
+            const labelHeight = 80;
+            
+            // Get top 5 matches
+            const topMatches = [];
+            comparisonImages.forEach((comp, imgIndex) => {
+                comp.faces.forEach((face, faceIndex) => {
+                    const referenceDescriptor = refFace.descriptor;
+                    const distance = faceapi.euclideanDistance(referenceDescriptor, face.descriptor);
+                    
+                    let similarity;
+                    if (distance < 0.4) {
+                        similarity = 95 + (0.4 - distance) * 12.5;
+                    } else if (distance < 0.5) {
+                        similarity = 85 + (0.5 - distance) * 100;
+                    } else if (distance < 0.6) {
+                        similarity = 70 + (0.6 - distance) * 150;
+                    } else if (distance < 0.7) {
+                        similarity = 50 + (0.7 - distance) * 200;
+                    } else {
+                        similarity = Math.max(0, 50 - (distance - 0.7) * 100);
+                    }
+                    similarity = Math.min(100, Math.max(0, similarity));
+                    
+                    topMatches.push({ imgIndex, faceIndex, similarity, comp, face });
+                });
+            });
+            
+            topMatches.sort((a, b) => b.similarity - a.similarity);
+            const displayMatches = topMatches.slice(0, 5);
+            
+            // Canvas dimensions
+            const cols = Math.min(3, displayMatches.length + 1); // +1 for reference
+            const rows = Math.ceil((displayMatches.length + 1) / cols);
+            canvas.width = cols * (faceWidth + padding) + padding;
+            canvas.height = headerHeight + rows * (faceHeight + labelHeight + padding) + padding;
+            
+            // Background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Header
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 48px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Face Comparison Report', canvas.width / 2, 60);
+            
+            let x = padding;
+            let y = headerHeight + padding;
+            
+            // Draw reference face
+            ctx.drawImage(refCanvas, 0, 0, refCanvas.width, refCanvas.height, x, y, faceWidth, faceHeight);
+            
+            // Label for reference
+            ctx.fillStyle = '#4caf50';
+            ctx.fillRect(x, y + faceHeight, faceWidth, labelHeight);
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 28px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('REFERENCE', x + faceWidth / 2, y + faceHeight + 35);
+            ctx.font = 'bold 20px Arial';
+            if (refFace.age) {
+                ctx.fillText(`Age: ~${Math.round(refFace.age)}`, x + faceWidth / 2, y + faceHeight + 62);
+            }
+            
+            x += faceWidth + padding;
+            
+            // Draw matched faces
+            displayMatches.forEach((match, index) => {
+                if (index > 0 && index % cols === 0) {
+                    x = padding;
+                    y += faceHeight + labelHeight + padding;
+                } else if (index === 1) {
+                    x = padding;
+                    y += faceHeight + labelHeight + padding;
+                }
+                
+                const faceCanvas = cropFaceFromImage(match.comp.image, match.face.box, 40);
+                ctx.drawImage(faceCanvas, 0, 0, faceCanvas.width, faceCanvas.height, x, y, faceWidth, faceHeight);
+                
+                // Label color based on match
+                let labelColor;
+                if (match.similarity >= 85) labelColor = '#4caf50';
+                else if (match.similarity >= 70) labelColor = '#8bc34a';
+                else if (match.similarity >= 50) labelColor = '#ffc107';
+                else labelColor = '#f44336';
+                
+                ctx.fillStyle = labelColor;
+                ctx.fillRect(x, y + faceHeight, faceWidth, labelHeight);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 32px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${match.similarity.toFixed(1)}% Match`, x + faceWidth / 2, y + faceHeight + 38);
+                ctx.font = 'bold 18px Arial';
+                if (match.face.age) {
+                    ctx.fillText(`Age: ~${Math.round(match.face.age)}`, x + faceWidth / 2, y + faceHeight + 65);
+                }
+                
+                x += faceWidth + padding;
+            });
+            
+            // Download the report
+            const timestamp = new Date().toISOString().slice(0, 10);
+            downloadCanvas(canvas, `face_comparison_report_${timestamp}.png`);
         }
 
         function showError(element, message) {
@@ -1410,13 +1799,20 @@
             element.appendChild(error);
         }
 
-        // Initialize - wait for both DOM and faceapi to be ready
+        // Initialize
         function initialize() {
             if (typeof faceapi === 'undefined') {
                 console.log('Waiting for face-api.js to load...');
                 setTimeout(initialize, 100);
                 return;
             }
+            
+            // Check for saved dark mode preference
+            const savedDarkMode = localStorage.getItem('darkMode');
+            if (savedDarkMode === 'true') {
+                document.body.classList.add('dark-mode');
+            }
+            
             console.log('Initializing face comparison tool...');
             setupEventListeners();
             loadModels();
