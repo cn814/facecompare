@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Face Comparison Tool — Refactor</title>
+  <title>Face Comparison Tool — Multi-Reference</title>
   <link rel="stylesheet" href="css/styles.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 </head>
@@ -21,11 +21,23 @@
     <div id="mainApp" class="hidden">
       <div class="upload-controls">
         <div class="box">
-          <h2>Reference Photo</h2>
+          <h2>Reference Photo(s)</h2>
+          <p class="helper-text">Upload 1-5 photos of the same person for better accuracy</p>
           <div id="uploadArea1" class="upload-area" data-target="1">
-            <input id="fileInput1" type="file" accept="image/*">
-            <div class="prompt">📸 Click or drop a reference image</div>
+            <input id="fileInput1" type="file" accept="image/*" multiple>
+            <div class="prompt">📸 Click or drop reference image(s)</div>
             <div id="preview1" class="preview"></div>
+          </div>
+          <div id="referenceInfo" class="reference-info hidden">
+            <p><strong>Reference photos loaded:</strong> <span id="refCount">0</span></p>
+            <label class="method-selector">
+              <span>Matching method:</span>
+              <select id="matchMethod">
+                <option value="average">Average (recommended)</option>
+                <option value="best">Best match</option>
+                <option value="median">Median</option>
+              </select>
+            </label>
           </div>
         </div>
 
