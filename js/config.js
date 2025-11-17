@@ -14,7 +14,8 @@ export const CONFIG = {
       good: 0.6,
       low: 0.7
     },
-    sunglassesAdjustment: 0.1
+    sunglassesAdjustment: 0.1,
+    multiReferenceMethod: 'average' // 'average', 'best', or 'median'
   },
   export: {
     matchThreshold: 60,
@@ -27,7 +28,8 @@ export const CONFIG = {
     displayMaxWidth: 600,
     displayMaxHeight: 400,
     comparisonMaxWidth: 500,
-    comparisonMaxHeight: 400
+    comparisonMaxHeight: 400,
+    maxReferencePhotos: 5 // Maximum number of reference photos
   },
   keyboard: {
     compare: 'c',
