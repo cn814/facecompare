@@ -441,15 +441,40 @@ function exportMatchSheet() {
     ctx.fillText(label, x + tileSize / 2, y + tileSize + 16);
   });
 
-  // Download as PNG
-  const dataUrl = outCanvas.toDataURL('image/png');
-  const link = document.createElement('a');
-  link.href = dataUrl;
-  link.download = 'face_match_sheet.png';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
+// --- EXPORT AS PNG ---
+const pngDataUrl = outCanvas.toDataURL('image/png');
+const link = document.createElement('a');
+link.href = pngDataUrl;
+link.download = 'face_match_sheet.png';
+document.body.appendChild(link);
+link.click();
+link.remove();
+
+// --- EXPORT AS PDF ---
+try {
+  const { jsPDF } = window.jspdf;
+
+  const pdf = new jsPDF({
+    orientation: outCanvas.width > outCanvas.height ? 'landscape' : 'portrait',
+    unit: 'pt',
+    format: [outCanvas.width, outCanvas.height]
+  });
+
+  pdf.addImage(
+    outCanvas.toDataURL('image/png'),
+    'PNG',
+    0,
+    0,
+    outCanvas.width,
+    outCanvas.height
+  );
+
+  pdf.save('face_match_sheet.pdf');
+} catch (err) {
+  console.error('PDF export failed:', err);
+  alert("Couldn't generate PDF — see console.");
 }
+
 
 function showError(target, message) {
   const e = document.createElement('div');
