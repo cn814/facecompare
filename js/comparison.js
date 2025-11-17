@@ -40,6 +40,83 @@ export function computeSimilarity(distance, anySunglasses = false) {
 }
 
 /**
+ * Average multiple face descriptors to create a composite descriptor
+ * @param {Array<Float32Array>} descriptors - Array of face descriptors
+ * @returns {Float32Array} Averaged descriptor
+ */
+export function averageDescriptors(descriptors) {
+  if (descriptors.length === 0) return null;
+  if (descriptors.length === 1) return descriptors[0];
+  
+  const length = descriptors[0].length;
+  const averaged = new Float32Array(length);
+  
+  // Sum all descriptors
+  for (let i = 0; i < length; i++) {
+    let sum = 0;
+    for (let j = 0; j < descriptors.length; j++) {
+      sum += descriptors[j][i];
+    }
+    averaged[i] = sum / descriptors.length;
+  }
+  
+  return averaged;
+}
+
+/**
+ * Compute similarity using multiple reference descriptors (ensemble approach)
+ * @param {Array<Float32Array>} refDescriptors - Array of reference descriptors
+ * @param {Float32Array} compareDescriptor - Descriptor to compare
+ * @param {boolean} anySunglasses - Whether any face has sunglasses
+ * @param {string} method - 'average', 'best', or 'median'
+ * @returns {{similarity: number, confidence: string, isMatch: boolean, distances: Array<number>}}
+ */
+export function computeMultiReferenceSimilarity(refDescriptors, compareDescriptor, anySunglasses = false, method = 'average') {
+  if (refDescriptors.length === 0) {
+    throw new Error('No reference descriptors provided');
+  }
+  
+  // Calculate distance to each reference
+  const distances = refDescriptors.map(refDesc => 
+    faceapi.euclideanDistance(refDesc, compareDescriptor)
+  );
+  
+  let finalDistance;
+  
+  switch (method) {
+    case 'best':
+      // Use the best (lowest) distance
+      finalDistance = Math.min(...distances);
+      break;
+      
+    case 'median':
+      // Use median distance
+      const sorted = [...distances].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+      finalDistance = sorted.length % 2 === 0 
+        ? (sorted[mid - 1] + sorted[mid]) / 2 
+        : sorted[mid];
+      break;
+      
+    case 'average':
+    default:
+      // Use average distance
+      finalDistance = distances.reduce((sum, d) => sum + d, 0) / distances.length;
+      break;
+  }
+  
+  const result = computeSimilarity(finalDistance, anySunglasses);
+  
+  return {
+    ...result,
+    distances,
+    finalDistance,
+    method,
+    referenceCount: refDescriptors.length
+  };
+}
+
+/**
  * Batch compute similarities for multiple face comparisons
  * @param {Float32Array} refDescriptor - Reference face descriptor
  * @param {Array} comparisons - Array of comparison objects with faces
