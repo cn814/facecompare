@@ -96,22 +96,51 @@ export function drawLandmarksOnCanvas(canvas, landmarks) {
 }
 
 /**
- * Show a processing spinner overlay
+ * Show a processing spinner overlay with progress bar
  * @param {HTMLElement} element - Element to show spinner in
  * @param {string} message - Message to display
- * @returns {Function} Function to remove the spinner
+ * @returns {Object} Object with updateProgress and remove functions
  */
 export function showProcessing(element, message = 'Processing...') {
   const spinner = createElementFromHTML(`
     <div class="processing-overlay">
       <div class="spinner"></div>
       <p>${message}</p>
+      <div class="processing-progress">
+        <div class="processing-progress-fill"></div>
+      </div>
+      <div class="processing-percentage">0%</div>
     </div>
   `);
   element.style.position = 'relative';
   element.appendChild(spinner);
-  return () => {
-    if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
+
+  const progressFill = spinner.querySelector('.processing-progress-fill');
+  const percentageText = spinner.querySelector('.processing-percentage');
+
+  return {
+    updateProgress: (percent) => {
+      if (progressFill && percentageText) {
+        progressFill.style.width = percent + '%';
+        percentageText.textContent = Math.round(percent) + '%';
+
+        // Auto-hide when reaching 100%
+        if (percent >= 100) {
+          setTimeout(() => {
+            if (spinner.parentNode) {
+              spinner.style.opacity = '0';
+              spinner.style.transition = 'opacity 0.3s ease-out';
+              setTimeout(() => {
+                if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
+              }, 300);
+            }
+          }, 200);
+        }
+      }
+    },
+    remove: () => {
+      if (spinner.parentNode) spinner.parentNode.removeChild(spinner);
+    }
   };
 }
 

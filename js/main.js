@@ -166,13 +166,16 @@ async function handleReferencePhotos(files) {
     fileWrapper.className = 'reference-photo-wrapper';
     preview1.appendChild(fileWrapper);
 
-    const stopSpinner = showProcessing(fileWrapper, 'Processing ' + file.name + '...');
+    const processor = showProcessing(fileWrapper, 'Processing ' + file.name + '...');
 
     try {
+      processor.updateProgress(10);
       const img = await fileToImage(file);
+      processor.updateProgress(30);
+
       const canvasData = createCanvasForImage(img, CONFIG.ui.displayMaxWidth, CONFIG.ui.displayMaxHeight);
       const canvas = canvasData.canvas;
-      
+
       const wrapper = document.createElement('div');
       wrapper.style.position = 'relative';
       wrapper.style.display = 'inline-block';
@@ -184,20 +187,23 @@ async function handleReferencePhotos(files) {
       removeBtn.className = 'remove-ref-btn';
       removeBtn.textContent = '×';
       removeBtn.title = 'Remove this reference photo';
-      removeBtn.onclick = function() { 
-        removeReferencePhoto(currentIndex); 
+      removeBtn.onclick = function() {
+        removeReferencePhoto(currentIndex);
       };
       wrapper.appendChild(removeBtn);
 
       fileWrapper.innerHTML = '';
       fileWrapper.appendChild(wrapper);
 
+      processor.updateProgress(50);
+
       // Detect faces
       const detections = await faceService.detectAllFaces(canvas, { useTiny: true, maxW: 800 });
-      
-      stopSpinner();
+
+      processor.updateProgress(75);
 
       if (detections.length === 0) {
+        processor.remove();
         showError(fileWrapper, 'No faces detected in ' + file.name);
         continue;
       }
@@ -215,21 +221,25 @@ async function handleReferencePhotos(files) {
         const labelText = 'Ref ' + (referencePhotos.length + 1) + '.' + (j + 1) + ageSuffix + sunglassesIndicator;
 
         placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
-        
+
         if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
       }
 
-      referencePhotos.push({ 
-        image: img, 
-        faces: detections, 
-        canvas: canvas, 
-        wrapper: wrapper, 
+      processor.updateProgress(90);
+
+      referencePhotos.push({
+        image: img,
+        faces: detections,
+        canvas: canvas,
+        wrapper: wrapper,
         file: file,
         index: referencePhotos.length
       });
 
+      processor.updateProgress(100);
+
     } catch (err) {
-      stopSpinner();
+      processor.remove();
       showError(fileWrapper, 'Error processing ' + file.name + ': ' + err.message);
     }
   }
@@ -314,13 +324,16 @@ async function handleComparisons(files) {
     fileWrapper.className = 'comparison-file-wrapper';
     preview2.appendChild(fileWrapper);
 
-    const stopSpinner = showProcessing(fileWrapper, 'Processing ' + file.name + '...');
+    const processor = showProcessing(fileWrapper, 'Processing ' + file.name + '...');
 
     try {
+      processor.updateProgress(10);
       const img = await fileToImage(file);
+      processor.updateProgress(30);
+
       const canvasData = createCanvasForImage(img, CONFIG.ui.comparisonMaxWidth, CONFIG.ui.comparisonMaxHeight);
       const canvas = canvasData.canvas;
-      
+
       const wrapper = document.createElement('div');
       wrapper.style.position = 'relative';
       wrapper.style.display = 'inline-block';
@@ -330,10 +343,15 @@ async function handleComparisons(files) {
       fileWrapper.innerHTML = '';
       fileWrapper.appendChild(wrapper);
 
+      processor.updateProgress(50);
+
       // Detect faces
       const detections = await faceService.detectAllFaces(canvas, { useTiny: true, maxW: 800 });
-      
+
+      processor.updateProgress(75);
+
       if (detections.length === 0) {
+        processor.remove();
         const err = document.createElement('div');
         err.className = 'error';
         err.textContent = 'No faces detected in ' + file.name;
@@ -346,24 +364,28 @@ async function handleComparisons(files) {
           d.sunglassesConfidence = sunglassesResult.confidence;
 
           if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
-          
+
           const box = d.detection.box;
           const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
           const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
-          
+
           placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
         }
 
-        comparisons.push({ 
-          file: file, 
-          image: img, 
-          faces: detections, 
-          canvas: canvas, 
-          wrapper: wrapper 
+        processor.updateProgress(90);
+
+        comparisons.push({
+          file: file,
+          image: img,
+          faces: detections,
+          canvas: canvas,
+          wrapper: wrapper
         });
+
+        processor.updateProgress(100);
       }
     } catch (err) {
-      stopSpinner();
+      processor.remove();
       showError(fileWrapper, 'Error processing ' + file.name + ': ' + err.message);
     }
   }
