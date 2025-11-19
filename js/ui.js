@@ -73,12 +73,11 @@ export function placeFaceBox(wrapper, box, index, labelText, color, canvas, qual
  */
 export function drawLandmarksOnCanvas(canvas, landmarks) {
   const ctx = canvas.getContext('2d');
-  const cssScale = canvas.clientWidth / canvas.width || 1;
 
   ctx.save();
   landmarks.positions.forEach((p, i) => {
     ctx.beginPath();
-    ctx.arc(p.x * cssScale, p.y * cssScale, 2, 0, Math.PI * 2);
+    ctx.arc(p.x, p.y, 2, 0, Math.PI * 2);
 
     // Color code by feature
     if (i < 17) ctx.fillStyle = '#fb7185';         // jaw
