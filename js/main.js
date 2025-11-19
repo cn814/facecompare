@@ -123,6 +123,12 @@ function setupUI() {
   compareBtn.addEventListener('click', performComparison);
   clearBtn.addEventListener('click', clearAll);
 
+  // Debug toggle checkbox
+  debugToggle.addEventListener('change', function() {
+    redrawAllReferences();
+    redrawComparisons();
+  });
+
   // Keyboard shortcuts
   document.addEventListener('keydown', function(e) {
     if (e.key === CONFIG.keyboard.compare && e.ctrlKey && !compareBtn.disabled) {
