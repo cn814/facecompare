@@ -479,15 +479,56 @@ async function performComparison() {
   allComparisons.forEach(function(c, idx) {
     const node = tpl.content.cloneNode(true);
     const root = node.querySelector('.result-item');
-    
+
+    // Extract face thumbnail
+    const compSet = comparisons[c.imageIndex];
+    if (compSet && compSet.canvas && compSet.faces && compSet.faces[c.faceIndex]) {
+      const face = compSet.faces[c.faceIndex];
+      const box = face.detection.box;
+      const faceCrop = cropFaceFromCanvas(compSet.canvas, box, 0.3);
+
+      // Create thumbnail container
+      const thumbnailDiv = document.createElement('div');
+      thumbnailDiv.className = 'result-face-thumbnail';
+      thumbnailDiv.appendChild(faceCrop);
+
+      // Color code thumbnail border based on similarity
+      if (c.similarity >= 85) {
+        thumbnailDiv.style.borderColor = 'var(--success)';
+        thumbnailDiv.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
+      } else if (c.similarity >= 70) {
+        thumbnailDiv.style.borderColor = '#8bc34a';
+        thumbnailDiv.style.boxShadow = '0 2px 8px rgba(139, 195, 74, 0.3)';
+      } else if (c.similarity >= 50) {
+        thumbnailDiv.style.borderColor = '#ff9800';
+        thumbnailDiv.style.boxShadow = '0 2px 8px rgba(255, 152, 0, 0.3)';
+      } else {
+        thumbnailDiv.style.borderColor = 'var(--danger)';
+        thumbnailDiv.style.boxShadow = '0 2px 8px rgba(239, 68, 68, 0.3)';
+      }
+
+      // Insert thumbnail before the title
+      root.insertBefore(thumbnailDiv, root.firstChild);
+
+      // Wrap existing content
+      const contentDiv = document.createElement('div');
+      contentDiv.className = 'result-content';
+      while (root.children.length > 1) {
+        contentDiv.appendChild(root.children[1]);
+      }
+      root.appendChild(contentDiv);
+    } else {
+      root.classList.add('no-thumbnail');
+    }
+
     const sunglassesNote = c.hasSunglasses || c.referenceSunglasses ? ' 🕶️' : '';
-    
+
     root.querySelector('.title').textContent = '#' + (idx + 1) + ': ' + c.fileName + ' - Face ' + (c.faceIndex + 1) + sunglassesNote;
     root.querySelector('.similarity-score').textContent = c.similarity.toFixed(1) + '% Match';
-    
+
     const fill = root.querySelector('.progress-fill');
     fill.style.width = c.similarity + '%';
-    
+
     if (c.similarity >= 85) {
       fill.style.background = 'linear-gradient(90deg,var(--success),#45a049)';
     } else if (c.similarity >= 70) {
@@ -502,16 +543,16 @@ async function performComparison() {
       ? Math.min.apply(null, c.distances).toFixed(3) + ' - ' + Math.max.apply(null, c.distances).toFixed(3)
       : c.distance.toFixed(3);
 
-    let detailsHTML = 
+    let detailsHTML =
       'Confidence: <strong>' + c.confidence + '</strong><br>' +
       'Distance: ' + distanceRange + '<br>' +
       'Quality: ' + c.quality + '%<br>' +
       'References used: ' + c.referenceCount;
-    
+
     if (typeof c.compAge === 'number') {
       detailsHTML += '<br>Age: ~' + Math.round(c.compAge) + 'y';
     }
-    
+
     if (c.hasSunglasses || c.referenceSunglasses) {
       detailsHTML += '<br><small>🕶️ Sunglasses detected - thresholds adjusted</small>';
     }
@@ -522,11 +563,11 @@ async function performComparison() {
 
   // Summary
   const summary = document.createElement('div');
-  summary.className = 'result-item';
-  summary.innerHTML = 
+  summary.className = 'result-item no-thumbnail';
+  summary.innerHTML =
     '<h3>Summary</h3>' +
     '<p>Found <strong>' + matches + '</strong> likely match' + (matches !== 1 ? 'es' : '') + ' out of <strong>' + total + '</strong> face' + (total !== 1 ? 's' : '') + '.</p>' +
-    '<p style="margin-top: 8px; font-size: 0.9em; color: var(--muted);">' +
+    '<p style="margin-top: 8px; font-size: 0.9em; color: var(--text-muted);">' +
     'Multi-reference comparison improves accuracy by comparing against ' + allRefDescriptors.length + ' reference samples' +
     '</p>';
   resultsDiv.appendChild(summary);
