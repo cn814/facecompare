@@ -36,14 +36,4 @@ export const CONFIG = {
     clear: 'Escape',
     debug: 'd'
   },
-  reverseSearch: {
-    engines: {
-      google: true,
-      yandex: true,
-      bing: true,
-      tineye: true
-    },
-    openInNewTab: true,
-    cropPadding: 0.3
-  }
 };
