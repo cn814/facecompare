@@ -197,8 +197,12 @@ async function handleReferencePhotos(files) {
         fileWrapper.appendChild(processorElement);
       }
 
-      // Detect faces
-      const detections = await faceService.detectAllFaces(canvas, { useTiny: true, maxW: 800 });
+      // Detect faces on ORIGINAL IMAGE to get accurate coordinates
+      const detections = await faceService.detectAllFaces(img, { useTiny: true, maxW: 800 });
+
+      // Calculate scale factor from original image to display canvas
+      const scaleX = canvas.width / img.width;
+      const scaleY = canvas.height / img.height;
 
       processor.updateProgress(75);
 
@@ -208,20 +212,36 @@ async function handleReferencePhotos(files) {
         continue;
       }
 
-      // Process each detected face
+      // Process each detected face and scale coordinates to display canvas
       detections.forEach((d, j) => {
         const sunglassesResult = detectSunglassesFast(img, d.landmarks);
         d.hasSunglasses = sunglassesResult.hasSunglasses;
         d.sunglassesConfidence = sunglassesResult.confidence;
 
+        // Scale the bounding box to display canvas coordinates
         const box = d.detection.box;
+        const scaledBox = {
+          x: box.x * scaleX,
+          y: box.y * scaleY,
+          width: box.width * scaleX,
+          height: box.height * scaleY
+        };
+
+        // Scale landmarks to display canvas coordinates
+        const scaledLandmarks = {
+          positions: d.landmarks.positions.map(p => ({
+            x: p.x * scaleX,
+            y: p.y * scaleY
+          }))
+        };
+
         const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
         const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
         const labelText = 'Ref ' + (referencePhotos.length + 1) + '.' + (j + 1) + ageSuffix + sunglassesIndicator;
 
-        placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
+        placeFaceBox(wrapper, scaledBox, j, labelText, '#22c55e', canvas, d.quality);
 
-        if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
+        if (debugToggle.checked) drawLandmarksOnCanvas(canvas, scaledLandmarks);
       });
 
       processor.updateProgress(90);
@@ -284,23 +304,43 @@ function removeReferencePhoto(index) {
 function redrawAllReferences() {
   referencePhotos.forEach((ref) => {
     ref.wrapper.querySelectorAll('.face-box').forEach(b => b.remove());
-    
+
     // Clear and redraw canvas
     const ctx = ref.canvas.getContext('2d');
     ctx.clearRect(0, 0, ref.canvas.width, ref.canvas.height);
     ctx.drawImage(ref.image, 0, 0, ref.canvas.width, ref.canvas.height);
-    
+
+    // Calculate scale factor from original image to display canvas
+    const scaleX = ref.canvas.width / ref.image.width;
+    const scaleY = ref.canvas.height / ref.image.height;
+
     // Redraw face boxes
     ref.faces.forEach((d, i) => {
       const box = d.detection.box;
+
+      // Scale the bounding box to display canvas coordinates
+      const scaledBox = {
+        x: box.x * scaleX,
+        y: box.y * scaleY,
+        width: box.width * scaleX,
+        height: box.height * scaleY
+      };
+
       const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
       const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
       const labelText = 'Ref ' + (ref.index + 1) + '.' + (i + 1) + ageSuffix + sunglassesIndicator;
-      
-      placeFaceBox(ref.wrapper, box, i, labelText, '#22c55e', ref.canvas, d.quality);
+
+      placeFaceBox(ref.wrapper, scaledBox, i, labelText, '#22c55e', ref.canvas, d.quality);
 
       if (debugToggle.checked) {
-        drawLandmarksOnCanvas(ref.canvas, d.landmarks);
+        // Scale landmarks to display canvas coordinates
+        const scaledLandmarks = {
+          positions: d.landmarks.positions.map(p => ({
+            x: p.x * scaleX,
+            y: p.y * scaleY
+          }))
+        };
+        drawLandmarksOnCanvas(ref.canvas, scaledLandmarks);
       }
     });
   });
@@ -347,8 +387,12 @@ async function handleComparisons(files) {
         fileWrapper.appendChild(processorElement);
       }
 
-      // Detect faces
-      const detections = await faceService.detectAllFaces(canvas, { useTiny: true, maxW: 800 });
+      // Detect faces on ORIGINAL IMAGE to get accurate coordinates
+      const detections = await faceService.detectAllFaces(img, { useTiny: true, maxW: 800 });
+
+      // Calculate scale factor from original image to display canvas
+      const scaleX = canvas.width / img.width;
+      const scaleY = canvas.height / img.height;
 
       processor.updateProgress(75);
 
@@ -364,13 +408,29 @@ async function handleComparisons(files) {
           d.hasSunglasses = sunglassesResult.hasSunglasses;
           d.sunglassesConfidence = sunglassesResult.confidence;
 
-          if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
-
+          // Scale the bounding box to display canvas coordinates
           const box = d.detection.box;
+          const scaledBox = {
+            x: box.x * scaleX,
+            y: box.y * scaleY,
+            width: box.width * scaleX,
+            height: box.height * scaleY
+          };
+
+          // Scale landmarks to display canvas coordinates
+          const scaledLandmarks = {
+            positions: d.landmarks.positions.map(p => ({
+              x: p.x * scaleX,
+              y: p.y * scaleY
+            }))
+          };
+
+          if (debugToggle.checked) drawLandmarksOnCanvas(canvas, scaledLandmarks);
+
           const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
           const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
 
-          placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
+          placeFaceBox(wrapper, scaledBox, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
         });
 
         processor.updateProgress(90);
@@ -400,19 +460,41 @@ async function handleComparisons(files) {
 function redrawComparisons() {
   comparisons.forEach((comp) => {
     comp.wrapper.querySelectorAll('.face-box').forEach(b => b.remove());
-    
+
     const ctx = comp.canvas.getContext('2d');
     ctx.clearRect(0, 0, comp.canvas.width, comp.canvas.height);
     ctx.drawImage(comp.image, 0, 0, comp.canvas.width, comp.canvas.height);
-    
+
+    // Calculate scale factor from original image to display canvas
+    const scaleX = comp.canvas.width / comp.image.width;
+    const scaleY = comp.canvas.height / comp.image.height;
+
     comp.faces.forEach((d, i) => {
-      if (debugToggle.checked) drawLandmarksOnCanvas(comp.canvas, d.landmarks);
-      
       const box = d.detection.box;
+
+      // Scale the bounding box to display canvas coordinates
+      const scaledBox = {
+        x: box.x * scaleX,
+        y: box.y * scaleY,
+        width: box.width * scaleX,
+        height: box.height * scaleY
+      };
+
+      if (debugToggle.checked) {
+        // Scale landmarks to display canvas coordinates
+        const scaledLandmarks = {
+          positions: d.landmarks.positions.map(p => ({
+            x: p.x * scaleX,
+            y: p.y * scaleY
+          }))
+        };
+        drawLandmarksOnCanvas(comp.canvas, scaledLandmarks);
+      }
+
       const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
       const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
-      
-      placeFaceBox(comp.wrapper, box, i, (i + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', comp.canvas, d.quality);
+
+      placeFaceBox(comp.wrapper, scaledBox, i, (i + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', comp.canvas, d.quality);
     });
   });
 }
@@ -504,7 +586,18 @@ async function performComparison() {
     if (compSet && compSet.canvas && compSet.faces && compSet.faces[c.faceIndex]) {
       const face = compSet.faces[c.faceIndex];
       const box = face.detection.box;
-      const faceCrop = cropFaceFromCanvas(compSet.canvas, box, 0.3);
+
+      // Scale box coordinates from original image to display canvas
+      const scaleX = compSet.canvas.width / compSet.image.width;
+      const scaleY = compSet.canvas.height / compSet.image.height;
+      const scaledBox = {
+        x: box.x * scaleX,
+        y: box.y * scaleY,
+        width: box.width * scaleX,
+        height: box.height * scaleY
+      };
+
+      const faceCrop = cropFaceFromCanvas(compSet.canvas, scaledBox, 0.3);
 
       // Create thumbnail container
       const thumbnailDiv = document.createElement('div');
@@ -860,7 +953,19 @@ function exportMatchSheet() {
   const refFace = referencePhotos[0].faces[0];
   const refBox = refFace.detection.box;
   const refCanvas = referencePhotos[0].canvas;
-  const refCrop = cropFaceFromCanvas(refCanvas, refBox, 0.4);
+  const refImage = referencePhotos[0].image;
+
+  // Scale reference box from original image to display canvas
+  const refScaleX = refCanvas.width / refImage.width;
+  const refScaleY = refCanvas.height / refImage.height;
+  const scaledRefBox = {
+    x: refBox.x * refScaleX,
+    y: refBox.y * refScaleY,
+    width: refBox.width * refScaleX,
+    height: refBox.height * refScaleY
+  };
+
+  const refCrop = cropFaceFromCanvas(refCanvas, scaledRefBox, 0.4);
   const refAge = typeof refFace.age === 'number' ? Math.round(refFace.age) : null;
 
   // Match crops
@@ -872,7 +977,18 @@ function exportMatchSheet() {
     if (!face) return;
 
     const box = face.detection.box;
-    const faceCrop = cropFaceFromCanvas(compSet.canvas, box, 0.4);
+
+    // Scale box from original image to display canvas
+    const scaleX = compSet.canvas.width / compSet.image.width;
+    const scaleY = compSet.canvas.height / compSet.image.height;
+    const scaledBox = {
+      x: box.x * scaleX,
+      y: box.y * scaleY,
+      width: box.width * scaleX,
+      height: box.height * scaleY
+    };
+
+    const faceCrop = cropFaceFromCanvas(compSet.canvas, scaledBox, 0.4);
     const compAge = typeof face.age === 'number' ? Math.round(face.age) : null;
 
     matchCrops.push({
