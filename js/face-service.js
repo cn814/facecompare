@@ -65,7 +65,7 @@ export const faceService = {
    * @returns {Promise<Array>} Array of face detections with landmarks, age, and descriptors
    */
   async detectAllFaces(input, options = {}) {
-    const useTiny = options.useTiny ?? true;
+    const useTiny = options.useTiny ?? false;
     const detector = useTiny
       ? new faceapi.TinyFaceDetectorOptions({ 
           inputSize: CONFIG.detection.inputSize, 

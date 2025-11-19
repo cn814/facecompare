@@ -2,10 +2,10 @@
 export const CONFIG = {
   detection: {
     inputSize: 416,
-    scoreThreshold: 0.35,
-    maxImageSize: 800,
+    scoreThreshold: 0.25,
+    maxImageSize: 1600,
     fallbackToSSD: true,
-    minFaceSize: 30
+    minFaceSize: 20
   },
   similarity: {
     thresholds: {
