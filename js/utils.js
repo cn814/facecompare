@@ -5,8 +5,11 @@ export const DEBUG = false; // Toggle for debug logging
  * Debug logging utility
  * @param {...any} args - Arguments to log
  */
-export function debug(...args) {
-  if (DEBUG) console.log('[DEBUG]', ...args);
+export function debug() {
+  if (DEBUG) {
+    var args = Array.prototype.slice.call(arguments);
+    console.log.apply(console, ['[DEBUG]'].concat(args));
+  }
 }
 
 /**
@@ -16,7 +19,9 @@ export function debug(...args) {
  * @param {number} b - Maximum value
  * @returns {number} Clamped value
  */
-export function clamp(v, a = 0, b = 100) {
+export function clamp(v, a, b) {
+  a = typeof a !== 'undefined' ? a : 0;
+  b = typeof b !== 'undefined' ? b : 100;
   return Math.max(a, Math.min(b, v));
 }
 
@@ -38,14 +43,17 @@ export function createElementFromHTML(html) {
  * @param {number} maxH - Maximum height
  * @returns {HTMLCanvasElement} Canvas with downscaled image
  */
-export function downscaleImageToCanvas(img, maxW = 800, maxH = 800) {
+export function downscaleImageToCanvas(img, maxW, maxH) {
+  maxW = maxW || 800;
+  maxH = maxH || 800;
+  
   const ratio = Math.min(1, Math.min(maxW / img.width, maxH / img.height));
   const w = Math.round(img.width * ratio);
   const h = Math.round(img.height * ratio);
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true }); // ← PERFORMANCE FIX
   ctx.drawImage(img, 0, 0, w, h);
   return canvas;
 }
@@ -71,10 +79,11 @@ export function formatFileSize(bytes) {
  */
 export function debounce(func, wait) {
   let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
+  return function executedFunction() {
+    const args = arguments;
+    const later = function() {
       clearTimeout(timeout);
-      func(...args);
+      func.apply(null, args);
     };
     clearTimeout(timeout);
     timeout = setTimeout(later, wait);
