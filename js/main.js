@@ -192,10 +192,15 @@ async function handleReferencePhotos(files) {
       };
       wrapper.appendChild(removeBtn);
 
+      processor.updateProgress(50);
+
+      // Replace content while keeping processor overlay
+      const processorElement = fileWrapper.querySelector('.processing-overlay');
       fileWrapper.innerHTML = '';
       fileWrapper.appendChild(wrapper);
-
-      processor.updateProgress(50);
+      if (processorElement) {
+        fileWrapper.appendChild(processorElement);
+      }
 
       // Detect faces
       const detections = await faceService.detectAllFaces(canvas, { useTiny: true, maxW: 800 });
@@ -340,10 +345,15 @@ async function handleComparisons(files) {
       wrapper.dataset.fileName = file.name;
       wrapper.appendChild(canvas);
 
+      processor.updateProgress(50);
+
+      // Replace content while keeping processor overlay
+      const processorElement = fileWrapper.querySelector('.processing-overlay');
       fileWrapper.innerHTML = '';
       fileWrapper.appendChild(wrapper);
-
-      processor.updateProgress(50);
+      if (processorElement) {
+        fileWrapper.appendChild(processorElement);
+      }
 
       // Detect faces
       const detections = await faceService.detectAllFaces(canvas, { useTiny: true, maxW: 800 });
