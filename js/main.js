@@ -1,10 +1,9 @@
-// main.js - Main application logic with multi-reference support and reverse image search
+// main.js - Main application logic with multi-reference support
 import { DEBUG, debug, downscaleImageToCanvas } from './utils.js';
 import { faceService } from './face-service.js';
 import { detectSunglassesFast } from './sunglasses.js';
-import { createCanvasForImage, placeFaceBox, drawLandmarksOnCanvas, showProcessing, showError, addSearchButton } from './ui.js';
+import { createCanvasForImage, placeFaceBox, drawLandmarksOnCanvas, showProcessing, showError } from './ui.js';
 import { computeSimilarity, computeMultiReferenceSimilarity, averageDescriptors } from './comparison.js';
-import { reverseImageSearch, createSearchMenu } from './reverse-search.js';
 import { CONFIG } from './config.js';
 
 // DOM elements
@@ -143,71 +142,6 @@ function setupUI() {
 }
 
 /**
- * Crop and search a face online
- * @param {HTMLCanvasElement} canvas - Source canvas
- * @param {Object} box - Face bounding box
- * @param {string} photoName - Name of the photo
- */
-async function searchFaceOnline(canvas, box, photoName) {
-  // Crop the face from the canvas
-  const padding = CONFIG.reverseSearch.cropPadding;
-  const padX = box.width * padding;
-  const padY = box.height * padding;
-
-  let sx = Math.max(0, box.x - padX);
-  let sy = Math.max(0, box.y - padY);
-  let sw = Math.min(canvas.width - sx, box.width + padX * 2);
-  let sh = Math.min(canvas.height - sy, box.height + padY * 2);
-
-  const cropCanvas = document.createElement('canvas');
-  cropCanvas.width = sw;
-  cropCanvas.height = sh;
-  const ctx = cropCanvas.getContext('2d');
-  ctx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
-
-  // Show search menu
-  const menu = createSearchMenu(async function(engine) {
-    const loadingMsg = document.createElement('div');
-    loadingMsg.className = 'loading-toast';
-    loadingMsg.textContent = 'Opening search engines...';
-    document.body.appendChild(loadingMsg);
-
-    try {
-      let engines;
-      if (engine === 'all') {
-        engines = CONFIG.reverseSearch.engines;
-      } else {
-        engines = {
-          google: false,
-          yandex: false,
-          bing: false,
-          tineye: false
-        };
-        engines[engine] = true;
-      }
-
-      const results = await reverseImageSearch(cropCanvas, { engines: engines });
-      
-      loadingMsg.textContent = 'Opened ' + results.success.length + ' search engine' + 
-        (results.success.length !== 1 ? 's' : '');
-      
-      setTimeout(function() {
-        loadingMsg.remove();
-      }, 2000);
-      
-    } catch (err) {
-      loadingMsg.textContent = 'Error: ' + err.message;
-      loadingMsg.style.background = 'var(--danger)';
-      setTimeout(function() {
-        loadingMsg.remove();
-      }, 3000);
-    }
-  });
-
-  document.body.appendChild(menu);
-}
-
-/**
  * Handle multiple reference photos upload
  * @param {Array<File>} files - Array of image files
  */
@@ -274,12 +208,7 @@ async function handleReferencePhotos(files) {
         const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
         const labelText = 'Ref ' + (referencePhotos.length + 1) + '.' + (j + 1) + ageSuffix + sunglassesIndicator;
 
-        const faceBox = placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
-        
-        // Add search button
-        addSearchButton(faceBox, function() {
-          searchFaceOnline(canvas, box, file.name);
-        });
+        placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
         
         if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
       }
@@ -356,12 +285,7 @@ function redrawAllReferences() {
       const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
       const labelText = 'Ref ' + (ref.index + 1) + '.' + (i + 1) + ageSuffix + sunglassesIndicator;
       
-      const faceBox = placeFaceBox(ref.wrapper, box, i, labelText, '#22c55e', ref.canvas, d.quality);
-      
-      // Re-add search button
-      addSearchButton(faceBox, function() {
-        searchFaceOnline(ref.canvas, box, ref.file.name);
-      });
+      placeFaceBox(ref.wrapper, box, i, labelText, '#22c55e', ref.canvas, d.quality);
       
       if (debugToggle.checked) drawLandmarksOnCanvas(ref.canvas, d.landmarks);
     }
@@ -421,12 +345,7 @@ async function handleComparisons(files) {
           const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
           const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
           
-          const faceBox = placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
-          
-          // Add search button
-          addSearchButton(faceBox, function() {
-            searchFaceOnline(canvas, box, file.name);
-          });
+          placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
         }
 
         comparisons.push({ 
@@ -466,12 +385,7 @@ function redrawComparisons() {
       const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
       const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
       
-      const faceBox = placeFaceBox(comp.wrapper, box, i, (i + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', comp.canvas, d.quality);
-      
-      // Re-add search button
-      addSearchButton(faceBox, function() {
-        searchFaceOnline(comp.canvas, box, comp.file.name);
-      });
+      placeFaceBox(comp.wrapper, box, i, (i + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', comp.canvas, d.quality);
     }
   });
 }
