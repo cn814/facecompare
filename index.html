@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Face Comparison Tool — Multi-Reference</title>
   <link rel="stylesheet" href="css/styles.css">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin="anonymous">
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin="anonymous">
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous"></script>
 </head>
 <body>
   <div class="container">
@@ -74,7 +76,7 @@
   </template>
 
   <!-- Load face-api from CDN and then our modules -->
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js" crossorigin="anonymous"></script>
   <script type="module" src="js/main.js"></script>
 </body>
 </html>

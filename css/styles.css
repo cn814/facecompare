@@ -60,12 +60,6 @@ h1{
 }
 
 .loading{
-  background:var(--card-bg);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
-  padding:32px;
-  border-radius:20px;
-  box-shadow:0 8px 32px var(--shadow-strong),inset 0 1px 0 rgba(255,255,255,0.05);
   border:1px solid var(--border);
   margin-bottom:32px;
 }
@@ -107,12 +101,7 @@ h1{
 }
 
 .box{
-  background:var(--card-bg);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
   padding:28px;
-  border-radius:20px;
-  box-shadow:0 8px 32px var(--shadow-strong),inset 0 1px 0 rgba(255,255,255,0.05);
   border:1px solid var(--border);
   transition:transform 0.2s ease,box-shadow 0.2s ease;
 }
@@ -377,19 +366,10 @@ h1{
   cursor:pointer;
 }
 
-.toggle input{
-  cursor:pointer;
-}
-
 .results{
-  background:var(--card-bg);
-  backdrop-filter:blur(20px);
-  -webkit-backdrop-filter:blur(20px);
   padding:32px;
-  border-radius:20px;
   border:1px solid var(--border);
   margin-top:32px;
-  box-shadow:0 8px 32px var(--shadow-strong),inset 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .results h2{
@@ -539,7 +519,7 @@ h1{
 }
 
 @keyframes spin{
-  to{transform:rotate(360deg);}
+  to { transform: rotate(360deg); }
 }
 
 .processing-overlay p{
@@ -578,6 +558,17 @@ h1{
   display:none!important;
 }
 
+/* Utility class for common card styling */
+.card {
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 20px;
+  box-shadow: 0 8px 32px var(--shadow-strong), inset 0 1px 0 rgba(255,255,255,0.05);
+  padding: 32px;
+  /* Add other common properties if needed */
+}
+
 @media (max-width:900px){
   .upload-controls{
     grid-template-columns:1fr;
@@ -595,7 +586,7 @@ h1{
   .box{
     padding:20px;
   }
-  .loading,.results{
+  .card{
     padding:24px;
   }
   .result-item{

@@ -53,12 +53,8 @@ async function boot() {
  * Update the compare button state based on available faces
  */
 function setDisabledState() {
-  const totalRefFaces = referencePhotos.reduce(function(s, r) { 
-    return s + r.faces.length; 
-  }, 0);
-  const totalCompFaces = comparisons.reduce(function(s, c) { 
-    return s + (c.faces ? c.faces.length : 0); 
-  }, 0);
+  const totalRefFaces = referencePhotos.reduce((sum, r) => sum + r.faces.length, 0);
+  const totalCompFaces = comparisons.reduce((sum, c) => sum + (c.faces?.length || 0), 0);
   
   compareBtn.disabled = !(totalRefFaces > 0 && totalCompFaces > 0);
   
@@ -158,8 +154,7 @@ async function handleReferencePhotos(files) {
     return;
   }
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
 
     const fileWrapper = document.createElement('div');
@@ -214,8 +209,7 @@ async function handleReferencePhotos(files) {
       }
 
       // Process each detected face
-      for (let j = 0; j < detections.length; j++) {
-        const d = detections[j];
+      detections.forEach((d, j) => {
         const sunglassesResult = detectSunglassesFast(img, d.landmarks);
         d.hasSunglasses = sunglassesResult.hasSunglasses;
         d.sunglassesConfidence = sunglassesResult.confidence;
@@ -228,7 +222,7 @@ async function handleReferencePhotos(files) {
         placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
 
         if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
-      }
+      });
 
       processor.updateProgress(90);
 
@@ -267,20 +261,19 @@ function removeReferencePhoto(index) {
   referencePhotos.splice(index, 1);
   
   // Re-index remaining photos
-  for (let i = 0; i < referencePhotos.length; i++) {
-    referencePhotos[i].index = i;
+  referencePhotos.forEach((ref, i) => {
+    ref.index = i;
     // Update labels
-    const boxes = referencePhotos[i].wrapper.querySelectorAll('.face-box');
-    boxes.forEach(function(box, faceIdx) {
+    ref.wrapper.querySelectorAll('.face-box').forEach((box, faceIdx) => {
       const label = box.querySelector('.face-label');
       if (label) {
-        const face = referencePhotos[i].faces[faceIdx];
+        const face = ref.faces[faceIdx];
         const ageSuffix = typeof face.age === 'number' ? ' (~' + Math.round(face.age) + 'y)' : '';
         const sunglassesIndicator = face.hasSunglasses ? ' 🕶️' : '';
         label.textContent = 'Ref ' + (i + 1) + '.' + (faceIdx + 1) + ageSuffix + sunglassesIndicator;
       }
     });
-  }
+  });
   
   setDisabledState();
 }
@@ -289,9 +282,8 @@ function removeReferencePhoto(index) {
  * Redraw all reference images with current debug settings
  */
 function redrawAllReferences() {
-  referencePhotos.forEach(function(ref) {
-    const boxes = ref.wrapper.querySelectorAll('.face-box');
-    boxes.forEach(function(b) { b.remove(); });
+  referencePhotos.forEach((ref) => {
+    ref.wrapper.querySelectorAll('.face-box').forEach(b => b.remove());
     
     // Clear and redraw canvas
     const ctx = ref.canvas.getContext('2d');
@@ -299,17 +291,18 @@ function redrawAllReferences() {
     ctx.drawImage(ref.image, 0, 0, ref.canvas.width, ref.canvas.height);
     
     // Redraw face boxes
-    for (let i = 0; i < ref.faces.length; i++) {
-      const d = ref.faces[i];
+    ref.faces.forEach((d, i) => {
       const box = d.detection.box;
       const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
       const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
       const labelText = 'Ref ' + (ref.index + 1) + '.' + (i + 1) + ageSuffix + sunglassesIndicator;
       
       placeFaceBox(ref.wrapper, box, i, labelText, '#22c55e', ref.canvas, d.quality);
-      
-      if (debugToggle.checked) drawLandmarksOnCanvas(ref.canvas, d.landmarks);
-    }
+
+      if (debugToggle.checked) {
+        drawLandmarksOnCanvas(ref.canvas, d.landmarks);
+      }
+    });
   });
 }
 
@@ -321,8 +314,7 @@ async function handleComparisons(files) {
   preview2.innerHTML = '';
   comparisons = [];
 
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
+  for (const file of files) {
     if (!file.type.startsWith('image/')) continue;
 
     const fileWrapper = document.createElement('div');
@@ -367,8 +359,7 @@ async function handleComparisons(files) {
         err.textContent = 'No faces detected in ' + file.name;
         wrapper.appendChild(err);
       } else {
-        for (let j = 0; j < detections.length; j++) {
-          const d = detections[j];
+        detections.forEach((d, j) => {
           const sunglassesResult = detectSunglassesFast(img, d.landmarks);
           d.hasSunglasses = sunglassesResult.hasSunglasses;
           d.sunglassesConfidence = sunglassesResult.confidence;
@@ -380,7 +371,7 @@ async function handleComparisons(files) {
           const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
 
           placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
-        }
+        });
 
         processor.updateProgress(90);
 
@@ -407,16 +398,14 @@ async function handleComparisons(files) {
  * Redraw all comparison images with current debug settings
  */
 function redrawComparisons() {
-  comparisons.forEach(function(comp) {
-    const boxes = comp.wrapper.querySelectorAll('.face-box');
-    boxes.forEach(function(b) { b.remove(); });
+  comparisons.forEach((comp) => {
+    comp.wrapper.querySelectorAll('.face-box').forEach(b => b.remove());
     
     const ctx = comp.canvas.getContext('2d');
     ctx.clearRect(0, 0, comp.canvas.width, comp.canvas.height);
     ctx.drawImage(comp.image, 0, 0, comp.canvas.width, comp.canvas.height);
     
-    for (let i = 0; i < comp.faces.length; i++) {
-      const d = comp.faces[i];
+    comp.faces.forEach((d, i) => {
       if (debugToggle.checked) drawLandmarksOnCanvas(comp.canvas, d.landmarks);
       
       const box = d.detection.box;
@@ -424,7 +413,7 @@ function redrawComparisons() {
       const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
       
       placeFaceBox(comp.wrapper, box, i, (i + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', comp.canvas, d.quality);
-    }
+    });
   });
 }
 
@@ -440,14 +429,12 @@ async function performComparison() {
   // Collect all reference descriptors
   const allRefDescriptors = [];
   const allRefSunglasses = [];
-  
-  referencePhotos.forEach(function(ref) {
-    ref.faces.forEach(function(face) {
+  referencePhotos.forEach(ref => {
+    ref.faces.forEach(face => {
       allRefDescriptors.push(face.descriptor);
       allRefSunglasses.push(face.hasSunglasses);
     });
   });
-
   const anyRefSunglasses = allRefSunglasses.some(function(s) { return s; });
   const method = matchMethod.value;
 
@@ -467,8 +454,8 @@ async function performComparison() {
   let total = 0;
 
   // Compute all similarities
-  comparisons.forEach(function(comp, imgIndex) {
-    comp.faces.forEach(function(face, faceIndex) {
+  comparisons.forEach((comp, imgIndex) => {
+    comp.faces.forEach((face, faceIndex) => {
       total++;
       
       const anySunglasses = anyRefSunglasses || face.hasSunglasses;
@@ -501,7 +488,7 @@ async function performComparison() {
   });
 
   allComparisons.sort(function(a, b) { return b.similarity - a.similarity; });
-  comparisonResults = allComparisons;
+  comparisonResults = allComparisons; // This is now a global state
 
   // Update visual indicators
   updateComparisonVisuals(allComparisons);
@@ -1007,7 +994,7 @@ function exportMatchSheet() {
     pdf.save('face_match_sheet.pdf');
   } catch (err) {
     console.error('PDF export failed:', err);
-    alert("PNG downloaded successfully. PDF generation failed - see console.");
+    alert("PNG downloaded successfully. PDF generation failed: " + err.message);
   }
 }
 
