@@ -441,25 +441,3 @@ h1{
 #results .btn{
   margin-top:6px;
 }
-```
-
----
-
-## **Quick Debugging Checklist:**
-
-1. **Clear your browser cache** (Ctrl+Shift+R or Cmd+Shift+R)
-2. **Check browser console** (F12) for any errors
-3. **Verify file structure:**
-```
-/
-├── index.html
-├── css/
-│   └── styles.css
-└── js/
-    ├── main.js
-    ├── config.js
-    ├── comparison.js
-    ├── face-service.js
-    ├── sunglasses.js
-    ├── ui.js
-    └── utils.js
