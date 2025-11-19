@@ -10,7 +10,7 @@ import { debug, clamp } from './utils.js';
 export function detectSunglassesFast(image, landmarks) {
   try {
     const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true }); // ← PERFORMANCE FIX
     canvas.width = Math.round(image.width * 0.2);
     canvas.height = Math.round(image.height * 0.2);
     
@@ -20,15 +20,15 @@ export function detectSunglassesFast(image, landmarks) {
     const scale = canvas.width / image.width;
 
     // Get bounding box for eye region
-    const getEyeBox = (indices) => {
-      const pts = indices.map(i => landmarks.positions[i]);
-      const xs = pts.map(p => p.x * scale);
-      const ys = pts.map(p => p.y * scale);
-      const x = Math.max(0, Math.floor(Math.min(...xs) - 2));
-      const y = Math.max(0, Math.floor(Math.min(...ys) - 2));
-      const w = Math.min(canvas.width - x, Math.ceil(Math.max(...xs) - Math.min(...xs) + 4));
-      const h = Math.min(canvas.height - y, Math.ceil(Math.max(...ys) - Math.min(...ys) + 4));
-      return { x, y, w, h };
+    const getEyeBox = function(indices) {
+      const pts = indices.map(function(i) { return landmarks.positions[i]; });
+      const xs = pts.map(function(p) { return p.x * scale; });
+      const ys = pts.map(function(p) { return p.y * scale; });
+      const x = Math.max(0, Math.floor(Math.min.apply(null, xs) - 2));
+      const y = Math.max(0, Math.floor(Math.min.apply(null, ys) - 2));
+      const w = Math.min(canvas.width - x, Math.ceil(Math.max.apply(null, xs) - Math.min.apply(null, xs) + 4));
+      const h = Math.min(canvas.height - y, Math.ceil(Math.max.apply(null, ys) - Math.min.apply(null, ys) + 4));
+      return { x: x, y: y, w: w, h: h };
     };
 
     // Left and right eye landmark indices
@@ -36,11 +36,13 @@ export function detectSunglassesFast(image, landmarks) {
     const right = getEyeBox([42, 43, 44, 45, 46, 47]);
 
     // Sample eye region for brightness and uniformity
-    const sample = (box) => {
+    const sample = function(box) {
       if (box.w <= 0 || box.h <= 0) return { avg: 255, darkRatio: 0, uniformity: 0 };
       
       const d = ctx.getImageData(box.x, box.y, box.w, box.h).data;
-      let sum = 0, dark = 0, n = d.length / 4;
+      let sum = 0;
+      let dark = 0;
+      const n = d.length / 4;
       const brightnesses = [];
       
       for (let i = 0; i < d.length; i += 4) {
@@ -52,11 +54,15 @@ export function detectSunglassesFast(image, landmarks) {
       
       // Calculate standard deviation for uniformity
       const avg = sum / n;
-      const variance = brightnesses.reduce((acc, b) => acc + Math.pow(b - avg, 2), 0) / n;
+      let variance = 0;
+      for (let i = 0; i < brightnesses.length; i++) {
+        variance += Math.pow(brightnesses[i] - avg, 2);
+      }
+      variance = variance / n;
       const stdDev = Math.sqrt(variance);
       const uniformity = 1 - Math.min(stdDev / 100, 1); // 0-1, higher = more uniform
       
-      return { avg, darkRatio: dark / n, uniformity };
+      return { avg: avg, darkRatio: dark / n, uniformity: uniformity };
     };
 
     const L = sample(left);
@@ -78,15 +84,15 @@ export function detectSunglassesFast(image, landmarks) {
     const hasSunglasses = confidence > 0.6;
     
     debug('sunglasses', { 
-      avg, 
-      darkRatio, 
-      uniformity, 
-      brightnessDiff, 
+      avg: avg, 
+      darkRatio: darkRatio, 
+      uniformity: uniformity, 
+      brightnessDiff: brightnessDiff, 
       confidence: confidence.toFixed(2),
-      hasSunglasses 
+      hasSunglasses: hasSunglasses 
     });
     
-    return { hasSunglasses, confidence: clamp(confidence, 0, 1) };
+    return { hasSunglasses: hasSunglasses, confidence: clamp(confidence, 0, 1) };
   } catch (e) {
     debug('sunglasses error', e);
     return { hasSunglasses: false, confidence: 0 };
