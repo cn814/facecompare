@@ -15,7 +15,7 @@ export const CONFIG = {
       low: 0.7
     },
     sunglassesAdjustment: 0.1,
-    multiReferenceMethod: 'average'
+    multiReferenceMethod: 'best' // Options: 'average', 'best', 'median'
   },
   export: {
     matchThreshold: 60,

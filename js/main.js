@@ -198,7 +198,7 @@ async function handleReferencePhotos(files) {
       }
 
       // Detect faces on display canvas - coordinates will be in canvas space
-      const detections = await faceService.detectAllFaces(canvas, { useTiny: true, maxW: 800 });
+      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: 1024 });
 
       processor.updateProgress(75);
 
@@ -208,8 +208,12 @@ async function handleReferencePhotos(files) {
         continue;
       }
 
+      // Filter out low-quality faces to improve accuracy
+      const initialCount = detections.length;
+      detections = detections.filter(d => d.quality >= 30);
+
       // Process each detected face
-      detections.forEach((d, j) => {
+      detections.forEach((d, j) => { // `j` is now the index in the *filtered* array
         const sunglassesResult = detectSunglassesFast(img, d.landmarks);
         d.hasSunglasses = sunglassesResult.hasSunglasses;
         d.sunglassesConfidence = sunglassesResult.confidence;
@@ -218,7 +222,12 @@ async function handleReferencePhotos(files) {
         const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
         const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
         const labelText = 'Ref ' + (referencePhotos.length + 1) + '.' + (j + 1) + ageSuffix + sunglassesIndicator;
-
+        
+        // Add a note if some faces were filtered out
+        if (initialCount > detections.length && j === 0) {
+          const note = `${initialCount - detections.length} low-quality face(s) ignored.`;
+          d.qualityNote = note; // We can display this later if needed.
+        }
         placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
 
         if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
@@ -348,7 +357,7 @@ async function handleComparisons(files) {
       }
 
       // Detect faces on display canvas - coordinates will be in canvas space
-      const detections = await faceService.detectAllFaces(canvas, { useTiny: true, maxW: 800 });
+      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: 1024 });
 
       processor.updateProgress(75);
 
@@ -359,7 +368,11 @@ async function handleComparisons(files) {
         err.textContent = 'No faces detected in ' + file.name;
         wrapper.appendChild(err);
       } else {
-        detections.forEach((d, j) => {
+        // Filter out low-quality faces to improve accuracy
+        const initialCount = detections.length;
+        detections = detections.filter(d => d.quality >= 30);
+
+        detections.forEach((d, j) => { // `j` is now the index in the *filtered* array
           const sunglassesResult = detectSunglassesFast(img, d.landmarks);
           d.hasSunglasses = sunglassesResult.hasSunglasses;
           d.sunglassesConfidence = sunglassesResult.confidence;
@@ -370,6 +383,11 @@ async function handleComparisons(files) {
           const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
           const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
 
+          // Add a note if some faces were filtered out
+          if (initialCount > detections.length && j === 0) {
+            const note = `${initialCount - detections.length} low-quality face(s) ignored.`;
+            d.qualityNote = note;
+          }
           placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
         });
 
