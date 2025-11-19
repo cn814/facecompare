@@ -90,12 +90,38 @@ export const faceService = {
       .withAgeAndGender()
       .withFaceDescriptors();
 
+    // Multi-scale detection: try with lower threshold if we found few faces
+    if (results.length < 3 && !useTiny) {
+      debug(`Only found ${results.length} faces, trying with lower threshold...`);
+      const lowerThresholdResults = await faceapi
+        .detectAllFaces(detectionInput, new faceapi.SsdMobilenetv1Options({
+          minConfidence: Math.max(0.1, CONFIG.detection.scoreThreshold - 0.1)
+        }))
+        .withFaceLandmarks()
+        .withAgeAndGender()
+        .withFaceDescriptors();
+
+      // Merge results, avoiding duplicates
+      lowerThresholdResults.forEach(newDetection => {
+        const isDuplicate = results.some(existing => {
+          const box1 = existing.detection.box;
+          const box2 = newDetection.detection.box;
+          const overlap = this.calculateIOU(box1, box2);
+          return overlap > 0.5;
+        });
+        if (!isDuplicate) {
+          results.push(newDetection);
+        }
+      });
+      debug(`After multi-scale detection: ${results.length} faces total`);
+    }
+
     // Fallback to SSD if tiny detector finds nothing
     if (results.length === 0 && useTiny && CONFIG.detection.fallbackToSSD) {
       debug('No faces found with Tiny detector, falling back to SSD...');
       results = await faceapi
-        .detectAllFaces(input, new faceapi.SsdMobilenetv1Options({ 
-          minConfidence: CONFIG.detection.scoreThreshold - 0.05 
+        .detectAllFaces(input, new faceapi.SsdMobilenetv1Options({
+          minConfidence: CONFIG.detection.scoreThreshold - 0.05
         }))
         .withFaceLandmarks()
         .withAgeAndGender()
@@ -115,6 +141,26 @@ export const faceService = {
     });
 
     return results;
+  },
+
+  /**
+   * Calculate Intersection over Union (IoU) between two bounding boxes
+   * @param {Object} box1 - First bounding box {x, y, width, height}
+   * @param {Object} box2 - Second bounding box {x, y, width, height}
+   * @returns {number} IoU score (0-1)
+   */
+  calculateIOU(box1, box2) {
+    const x1 = Math.max(box1.x, box2.x);
+    const y1 = Math.max(box1.y, box2.y);
+    const x2 = Math.min(box1.x + box1.width, box2.x + box2.width);
+    const y2 = Math.min(box1.y + box1.height, box2.y + box2.height);
+
+    const intersectionArea = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+    const box1Area = box1.width * box1.height;
+    const box2Area = box2.width * box2.height;
+    const unionArea = box1Area + box2Area - intersectionArea;
+
+    return unionArea > 0 ? intersectionArea / unionArea : 0;
   },
 
   /**

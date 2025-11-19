@@ -1,11 +1,11 @@
 // config.js - Central configuration
 export const CONFIG = {
   detection: {
-    inputSize: 416,
-    scoreThreshold: 0.25,
-    maxImageSize: 1600,
+    inputSize: 608,
+    scoreThreshold: 0.15,
+    maxImageSize: 3000,
     fallbackToSSD: true,
-    minFaceSize: 20
+    minFaceSize: 15
   },
   similarity: {
     thresholds: {
