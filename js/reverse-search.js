@@ -1,7 +1,7 @@
-// reverse-search.js - Reverse image search integration
+// reverse-search.js - Reverse image search integration (Fixed version)
 
 /**
- * Convert canvas to blob for uploading
+ * Convert canvas to blob for downloading
  * @param {HTMLCanvasElement} canvas - Canvas to convert
  * @param {string} type - Image type (default: image/jpeg)
  * @param {number} quality - Image quality 0-1 (default: 0.9)
@@ -23,51 +23,39 @@ export function canvasToBlob(canvas, type, quality) {
 }
 
 /**
- * Convert blob to base64 data URL
- * @param {Blob} blob - Blob to convert
- * @returns {Promise<string>} Base64 data URL
+ * Download a blob as a file
+ * @param {Blob} blob - Blob to download
+ * @param {string} filename - Filename
  */
-export function blobToDataURL(blob) {
-  return new Promise(function(resolve, reject) {
-    const reader = new FileReader();
-    reader.onload = function() {
-      resolve(reader.result);
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(blob);
-  });
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Clean up the URL after a delay
+  setTimeout(function() {
+    URL.revokeObjectURL(url);
+  }, 100);
 }
 
 /**
- * Open Google reverse image search
+ * Open Google reverse image search with instructions
  * @param {Blob} imageBlob - Image blob to search
+ * @returns {Promise<boolean>}
  */
 export async function searchGoogle(imageBlob) {
   try {
-    // Google Images accepts base64 data URLs via URL parameter
-    const dataURL = await blobToDataURL(imageBlob);
+    // Download the image for user to upload manually
+    downloadBlob(imageBlob, 'face_search.jpg');
     
-    // Create a form and submit it
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://www.google.com/searchbyimage/upload';
-    form.target = '_blank';
-    
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'encoded_image';
-    input.value = dataURL.split(',')[1]; // Remove data:image/jpeg;base64, prefix
-    
-    const inputType = document.createElement('input');
-    inputType.type = 'hidden';
-    inputType.name = 'image_content';
-    inputType.value = '';
-    
-    form.appendChild(input);
-    form.appendChild(inputType);
-    document.body.appendChild(form);
-    form.submit();
-    document.body.removeChild(form);
+    // Open Google Images search page
+    setTimeout(function() {
+      window.open('https://www.google.com/imghp?hl=en', '_blank');
+    }, 500);
     
     return true;
   } catch (err) {
@@ -78,15 +66,18 @@ export async function searchGoogle(imageBlob) {
 
 /**
  * Open Yandex reverse image search
- * @param {Blob} imageBlob - Image blob to search
+ * @param {Blob} imageBlob - Image blob to search  
+ * @returns {Promise<boolean>}
  */
 export async function searchYandex(imageBlob) {
   try {
-    const dataURL = await blobToDataURL(imageBlob);
+    // Download the image
+    downloadBlob(imageBlob, 'face_search.jpg');
     
-    // Yandex accepts images via their upload endpoint
-    const url = 'https://yandex.com/images/search?rpt=imageview&url=' + encodeURIComponent(dataURL);
-    window.open(url, '_blank');
+    // Open Yandex Images
+    setTimeout(function() {
+      window.open('https://yandex.com/images/', '_blank');
+    }, 500);
     
     return true;
   } catch (err) {
@@ -98,15 +89,17 @@ export async function searchYandex(imageBlob) {
 /**
  * Open Bing visual search
  * @param {Blob} imageBlob - Image blob to search
+ * @returns {Promise<boolean>}
  */
 export async function searchBing(imageBlob) {
   try {
-    const dataURL = await blobToDataURL(imageBlob);
+    // Download the image
+    downloadBlob(imageBlob, 'face_search.jpg');
     
-    // Bing Visual Search URL
-    const url = 'https://www.bing.com/images/search?view=detailv2&iss=sbi&form=SBIIRP&sbisrc=UrlPaste&q=imgurl:' + 
-                encodeURIComponent(dataURL);
-    window.open(url, '_blank');
+    // Open Bing Visual Search
+    setTimeout(function() {
+      window.open('https://www.bing.com/visualsearch', '_blank');
+    }, 500);
     
     return true;
   } catch (err) {
@@ -118,52 +111,21 @@ export async function searchBing(imageBlob) {
 /**
  * Open TinEye reverse image search
  * @param {Blob} imageBlob - Image blob to search
+ * @returns {Promise<boolean>}
  */
 export async function searchTinEye(imageBlob) {
   try {
-    // TinEye requires uploading via their form
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = 'https://tineye.com/search';
-    form.target = '_blank';
-    form.enctype = 'multipart/form-data';
+    // Download the image
+    downloadBlob(imageBlob, 'face_search.jpg');
     
-    const formData = new FormData();
-    formData.append('image', imageBlob, 'search.jpg');
-    
-    // Create temporary iframe for submission
-    const iframe = document.createElement('iframe');
-    iframe.style.display = 'none';
-    iframe.name = 'tineye_upload';
-    document.body.appendChild(iframe);
-    
-    form.target = 'tineye_upload';
-    document.body.appendChild(form);
-    
-    // Convert FormData to form inputs
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.name = 'image';
-    
-    // Create a File from Blob
-    const file = new File([imageBlob], 'search.jpg', { type: 'image/jpeg' });
-    const dataTransfer = new DataTransfer();
-    dataTransfer.items.add(file);
-    fileInput.files = dataTransfer.files;
-    
-    form.appendChild(fileInput);
-    form.submit();
-    
+    // Open TinEye
     setTimeout(function() {
-      document.body.removeChild(form);
-      document.body.removeChild(iframe);
-    }, 1000);
+      window.open('https://tineye.com/', '_blank');
+    }, 500);
     
     return true;
   } catch (err) {
     console.error('TinEye search failed:', err);
-    // Fallback: open TinEye homepage
-    window.open('https://tineye.com/', '_blank');
     return false;
   }
 }
@@ -185,41 +147,53 @@ export async function reverseImageSearch(canvas, options) {
   
   try {
     // Convert canvas to blob
-    const blob = await canvasToBlob(canvas, 'image/jpeg', 0.9);
+    const blob = await canvasToBlob(canvas, 'image/jpeg', 0.92);
     
     const results = {
       success: [],
       failed: []
     };
     
-    // Search on each enabled engine with slight delay between each
-    if (engines.google) {
-      const success = await searchGoogle(blob);
-      results[success ? 'success' : 'failed'].push('Google');
-      if (engines.yandex || engines.bing || engines.tineye) {
-        await delay(500); // Delay to avoid browser popup blocking
-      }
-    }
+    const enabledEngines = [];
+    if (engines.google) enabledEngines.push('google');
+    if (engines.yandex) enabledEngines.push('yandex');
+    if (engines.bing) enabledEngines.push('bing');
+    if (engines.tineye) enabledEngines.push('tineye');
     
-    if (engines.yandex) {
-      const success = await searchYandex(blob);
-      results[success ? 'success' : 'failed'].push('Yandex');
-      if (engines.bing || engines.tineye) {
-        await delay(500);
-      }
-    }
+    // Download image once for all searches
+    downloadBlob(blob, 'face_search.jpg');
     
-    if (engines.bing) {
-      const success = await searchBing(blob);
-      results[success ? 'success' : 'failed'].push('Bing');
-      if (engines.tineye) {
-        await delay(500);
+    // Open each search engine with delay
+    for (let i = 0; i < enabledEngines.length; i++) {
+      const engine = enabledEngines[i];
+      let success = false;
+      
+      await delay(i * 600); // Stagger to avoid popup blocking
+      
+      switch(engine) {
+        case 'google':
+          window.open('https://www.google.com/imghp?hl=en', '_blank');
+          success = true;
+          break;
+        case 'yandex':
+          window.open('https://yandex.com/images/', '_blank');
+          success = true;
+          break;
+        case 'bing':
+          window.open('https://www.bing.com/visualsearch', '_blank');
+          success = true;
+          break;
+        case 'tineye':
+          window.open('https://tineye.com/', '_blank');
+          success = true;
+          break;
       }
-    }
-    
-    if (engines.tineye) {
-      const success = await searchTinEye(blob);
-      results[success ? 'success' : 'failed'].push('TinEye');
+      
+      if (success) {
+        results.success.push(engine.charAt(0).toUpperCase() + engine.slice(1));
+      } else {
+        results.failed.push(engine.charAt(0).toUpperCase() + engine.slice(1));
+      }
     }
     
     return results;
@@ -241,7 +215,7 @@ function delay(ms) {
 }
 
 /**
- * Create a search menu UI element
+ * Create a search menu UI element with instructions
  * @param {Function} onSearch - Callback when search is initiated
  * @returns {HTMLElement} Search menu element
  */
@@ -253,10 +227,19 @@ export function createSearchMenu(onSearch) {
       <span>🔍 Search Online</span>
       <button class="close-menu">×</button>
     </div>
+    <div class="search-menu-instructions">
+      <p><strong>How it works:</strong></p>
+      <ol>
+        <li>Image will be <strong>downloaded</strong> to your computer</li>
+        <li>Search engine pages will <strong>open in new tabs</strong></li>
+        <li>Click the <strong>camera/upload icon</strong> on each search page</li>
+        <li>Upload the downloaded <strong>face_search.jpg</strong> file</li>
+      </ol>
+    </div>
     <div class="search-menu-options">
       <button class="search-btn" data-engine="all">
         <span class="engine-icon">🌐</span>
-        <span>Search All Engines</span>
+        <span>Open All Search Engines</span>
       </button>
       <button class="search-btn" data-engine="google">
         <span class="engine-icon">G</span>
@@ -264,7 +247,7 @@ export function createSearchMenu(onSearch) {
       </button>
       <button class="search-btn" data-engine="yandex">
         <span class="engine-icon">Я</span>
-        <span>Yandex</span>
+        <span>Yandex Images</span>
       </button>
       <button class="search-btn" data-engine="bing">
         <span class="engine-icon">B</span>
@@ -276,7 +259,7 @@ export function createSearchMenu(onSearch) {
       </button>
     </div>
     <div class="search-menu-note">
-      Find where this face appears online. Opens search engines in new tabs.
+      ⚠️ Due to security restrictions, the image will download and you'll need to manually upload it to the search engines.
     </div>
   `;
   
