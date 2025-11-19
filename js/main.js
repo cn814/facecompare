@@ -531,7 +531,7 @@ async function performComparison() {
     '</p>';
   resultsDiv.appendChild(summary);
 
-  // Export button
+  // Export buttons
   const hasOver60 = allComparisons.some(function(c) { return c.similarity >= CONFIG.export.matchThreshold; });
   if (hasOver60) {
     const exportSheetBtn = document.createElement('button');
@@ -541,6 +541,53 @@ async function performComparison() {
     exportSheetBtn.addEventListener('click', function() { exportMatchSheet(); });
     resultsDiv.appendChild(exportSheetBtn);
   }
+
+  // ZIP Export controls
+  const zipExportDiv = document.createElement('div');
+  zipExportDiv.className = 'export-controls';
+  zipExportDiv.style.marginTop = '20px';
+  zipExportDiv.style.padding = '15px';
+  zipExportDiv.style.background = 'rgba(255, 255, 255, 0.05)';
+  zipExportDiv.style.borderRadius = '8px';
+
+  const zipTitle = document.createElement('h3');
+  zipTitle.textContent = 'Export Matching Photos to ZIP';
+  zipTitle.style.marginTop = '0';
+  zipTitle.style.marginBottom = '10px';
+  zipExportDiv.appendChild(zipTitle);
+
+  const zipDescription = document.createElement('p');
+  zipDescription.textContent = 'Download all photos containing faces that match the reference at or above the selected threshold:';
+  zipDescription.style.fontSize = '0.9em';
+  zipDescription.style.color = 'var(--muted)';
+  zipDescription.style.marginBottom = '15px';
+  zipExportDiv.appendChild(zipDescription);
+
+  // Threshold buttons
+  const thresholds = [60, 75, 80, 90];
+  const buttonContainer = document.createElement('div');
+  buttonContainer.style.display = 'flex';
+  buttonContainer.style.gap = '10px';
+  buttonContainer.style.flexWrap = 'wrap';
+
+  thresholds.forEach(function(threshold) {
+    const matchCount = allComparisons.filter(function(c) { return c.similarity >= threshold; }).length;
+    const btn = document.createElement('button');
+    btn.className = 'btn secondary';
+    btn.textContent = '≥ ' + threshold + '% (' + matchCount + ' match' + (matchCount !== 1 ? 'es' : '') + ')';
+    btn.disabled = matchCount === 0;
+
+    if (matchCount > 0) {
+      btn.addEventListener('click', function() {
+        exportMatchingPhotosToZip(threshold);
+      });
+    }
+
+    buttonContainer.appendChild(btn);
+  });
+
+  zipExportDiv.appendChild(buttonContainer);
+  resultsDiv.appendChild(zipExportDiv);
 
   resultsDiv.scrollIntoView({ behavior: 'smooth' });
 }
@@ -626,6 +673,105 @@ function drawCropIntoTile(ctx, cropCanvas, x, y, tileW, tileH) {
   const offsetX = x + (tileW - drawW) / 2;
   const offsetY = y + (tileH - drawH) / 2;
   ctx.drawImage(cropCanvas, 0, 0, w, h, offsetX, offsetY, drawW, drawH);
+}
+
+/**
+ * Export matching photos to ZIP file with threshold filter
+ * @param {number} threshold - Minimum similarity percentage (60, 75, 80, 90)
+ */
+async function exportMatchingPhotosToZip(threshold) {
+  if (!comparisonResults || !comparisonResults.length) {
+    alert('No comparison results available.');
+    return;
+  }
+
+  const matches = comparisonResults.filter(function(c) {
+    return c.similarity >= threshold;
+  });
+
+  if (!matches.length) {
+    alert('No matches with similarity ≥ ' + threshold + '%.');
+    return;
+  }
+
+  try {
+    // Check if JSZip is available
+    if (typeof JSZip === 'undefined') {
+      alert('JSZip library not loaded. Please refresh the page.');
+      return;
+    }
+
+    const zip = new JSZip();
+    const folder = zip.folder('matched_faces_' + threshold + 'percent');
+
+    // Track which files we've already added to avoid duplicates
+    const addedFiles = new Map();
+
+    // Process each match
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const compSet = comparisons[match.imageIndex];
+
+      if (!compSet || !compSet.file) continue;
+
+      const fileName = compSet.file.name;
+      const fileKey = fileName + '_' + match.faceIndex;
+
+      // Skip if we've already added this exact file/face combination
+      if (addedFiles.has(fileKey)) continue;
+
+      // Read the original file and add to ZIP
+      try {
+        const fileData = await readFileAsArrayBuffer(compSet.file);
+
+        // Create a unique filename with similarity score
+        const nameParts = fileName.split('.');
+        const ext = nameParts.pop();
+        const baseName = nameParts.join('.');
+        const newFileName = baseName + '_face' + (match.faceIndex + 1) + '_' + match.similarity.toFixed(1) + 'percent.' + ext;
+
+        folder.file(newFileName, fileData);
+        addedFiles.set(fileKey, true);
+      } catch (err) {
+        console.error('Error adding file to ZIP:', fileName, err);
+      }
+    }
+
+    // Generate ZIP file
+    const zipBlob = await zip.generateAsync({
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
+
+    // Download ZIP file
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(zipBlob);
+    link.download = 'matched_faces_' + threshold + 'percent_' + new Date().toISOString().split('T')[0] + '.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+
+    alert('Successfully exported ' + addedFiles.size + ' matched photo' + (addedFiles.size !== 1 ? 's' : '') + ' to ZIP file.');
+  } catch (err) {
+    console.error('ZIP export failed:', err);
+    alert('Failed to create ZIP file: ' + err.message);
+  }
+}
+
+/**
+ * Read a File object as ArrayBuffer
+ * @param {File} file - File to read
+ * @returns {Promise<ArrayBuffer>} File data as ArrayBuffer
+ */
+function readFileAsArrayBuffer(file) {
+  return new Promise(function(resolve, reject) {
+    const reader = new FileReader();
+    reader.onload = function(e) { resolve(e.target.result); };
+    reader.onerror = function() { reject(new Error('Failed to read file')); };
+    reader.readAsArrayBuffer(file);
+  });
 }
 
 /**
