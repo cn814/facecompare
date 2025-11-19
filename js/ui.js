@@ -126,20 +126,3 @@ export function showError(target, message) {
   e.textContent = message;
   target.appendChild(e);
 }
-/**
- * Add a reverse search button to a face box
- * @param {HTMLElement} faceBox - Face box element
- * @param {Function} onSearch - Callback when search is clicked
- */
-export function addSearchButton(faceBox, onSearch) {
-  const searchBtn = document.createElement('button');
-  searchBtn.className = 'face-search-btn';
-  searchBtn.innerHTML = '🔍';
-  searchBtn.title = 'Search this face online';
-  searchBtn.onclick = function(e) {
-    e.stopPropagation();
-    onSearch();
-  };
-  faceBox.appendChild(searchBtn);
-  return searchBtn;
-}
