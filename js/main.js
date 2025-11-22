@@ -66,28 +66,66 @@ async function boot() {
  */
 function setDisabledState() {
   const totalRefFaces = referencePhotos.reduce((sum, r) => sum + r.faces.length, 0);
+  const selectedRefFaces = referencePhotos.reduce((sum, r) => sum + r.faces.filter(f => f.selected).length, 0);
   const totalCompFaces = comparisons.reduce((sum, c) => sum + (c.faces?.length || 0), 0);
-  
-  compareBtn.disabled = !(totalRefFaces > 0 && totalCompFaces > 0);
-  
+
+  compareBtn.disabled = !(selectedRefFaces > 0 && totalCompFaces > 0);
+
   if (compareBtn.disabled) {
-    compareBtn.textContent = 'Upload Photos to Compare';
+    if (totalRefFaces > 0 && selectedRefFaces === 0) {
+      compareBtn.textContent = 'Select at least one reference face';
+    } else {
+      compareBtn.textContent = 'Upload Photos to Compare';
+    }
   } else {
-    const refText = referencePhotos.length > 1 
-      ? referencePhotos.length + ' references' 
-      : '1 reference';
+    const refText = selectedRefFaces > 1
+      ? selectedRefFaces + ' ref faces'
+      : '1 ref face';
     compareBtn.textContent = 'Compare ' + refText + ' vs ' + totalCompFaces + ' face' + (totalCompFaces > 1 ? 's' : '');
     compareBtn.title = 'Press Ctrl+' + CONFIG.keyboard.compare.toUpperCase() + ' to compare';
   }
-  
+
   // Update reference info
   if (totalRefFaces > 0) {
     referenceInfo.classList.remove('hidden');
-    refCount.textContent = referencePhotos.length + ' photo' + (referencePhotos.length > 1 ? 's' : '') + 
-      ' (' + totalRefFaces + ' face' + (totalRefFaces > 1 ? 's' : '') + ')';
+    const selectedText = selectedRefFaces < totalRefFaces
+      ? ' (' + selectedRefFaces + ' selected)'
+      : '';
+    refCount.textContent = referencePhotos.length + ' photo' + (referencePhotos.length > 1 ? 's' : '') +
+      ' (' + totalRefFaces + ' face' + (totalRefFaces > 1 ? 's' : '') + ')' + selectedText;
   } else {
     referenceInfo.classList.add('hidden');
   }
+}
+
+/**
+ * Toggle face selection for reference photos
+ */
+function toggleFaceSelection(refIndex, faceIndex) {
+  const ref = referencePhotos[refIndex];
+  if (!ref || !ref.faces[faceIndex]) return;
+
+  const face = ref.faces[faceIndex];
+  face.selected = !face.selected;
+
+  // Update visual state
+  const faceBoxes = ref.wrapper.querySelectorAll('.face-box');
+  const faceBox = faceBoxes[faceIndex];
+  if (faceBox) {
+    if (face.selected) {
+      faceBox.classList.add('face-selected');
+      faceBox.classList.remove('face-deselected');
+      faceBox.style.borderColor = '#22c55e';
+      faceBox.style.opacity = '1';
+    } else {
+      faceBox.classList.remove('face-selected');
+      faceBox.classList.add('face-deselected');
+      faceBox.style.borderColor = '#6b7280';
+      faceBox.style.opacity = '0.5';
+    }
+  }
+
+  setDisabledState();
 }
 
 /**
@@ -264,18 +302,31 @@ async function handleReferencePhotos(files) {
         const sunglassesResult = detectSunglassesFast(img, d.landmarks);
         d.hasSunglasses = sunglassesResult.hasSunglasses;
         d.sunglassesConfidence = sunglassesResult.confidence;
+        d.selected = true; // All faces selected by default
 
         const box = d.detection.box;
         const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
         const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
         const labelText = 'Ref ' + (referencePhotos.length + 1) + '.' + (j + 1) + ageSuffix + sunglassesIndicator;
-        
+
         // Add a note if some faces were filtered out
         if (initialCount > detections.length && j === 0) {
           const note = `${initialCount - detections.length} low-quality face(s) ignored.`;
           d.qualityNote = note; // We can display this later if needed.
         }
-        placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
+        const faceBox = placeFaceBox(wrapper, box, j, labelText, '#22c55e', canvas, d.quality);
+
+        // Make face box clickable to toggle selection
+        if (faceBox) {
+          faceBox.style.cursor = 'pointer';
+          faceBox.dataset.faceIndex = j;
+          faceBox.dataset.refIndex = referencePhotos.length;
+          faceBox.classList.add('face-selected');
+          faceBox.addEventListener('click', function(e) {
+            e.stopPropagation();
+            toggleFaceSelection(parseInt(faceBox.dataset.refIndex), parseInt(faceBox.dataset.faceIndex));
+          });
+        }
 
         if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
       });
@@ -756,16 +807,23 @@ async function performComparison() {
 
   if (referencePhotos.length === 0) return;
 
-  // Collect all reference descriptors
+  // Collect only SELECTED reference descriptors
   const allRefDescriptors = [];
   const allRefSunglasses = [];
   referencePhotos.forEach(ref => {
     ref.faces.forEach(face => {
-      allRefDescriptors.push(face.descriptor);
-      allRefSunglasses.push(face.hasSunglasses);
+      if (face.selected) {
+        allRefDescriptors.push(face.descriptor);
+        allRefSunglasses.push(face.hasSunglasses);
+      }
     });
   });
   const anyRefSunglasses = allRefSunglasses.some(function(s) { return s; });
+
+  if (allRefDescriptors.length === 0) {
+    alert('Please select at least one reference face');
+    return;
+  }
   const method = matchMethod.value;
 
   // Info banner

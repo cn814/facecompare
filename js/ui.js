@@ -59,7 +59,7 @@ export function placeFaceBox(wrapper, box, index, labelText, color, canvas, qual
 
   // Add tooltip with quality information
   if (quality !== null) {
-    div.title = `Face ${index + 1}\nQuality: ${quality}%\nClick to select`;
+    div.title = `Face ${index + 1}\nQuality: ${quality}%\nClick to toggle selection`;
   }
 
   wrapper.appendChild(div);

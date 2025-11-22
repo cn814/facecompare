@@ -810,3 +810,38 @@ h1{
 .url-actions .btn{
   flex:1;
 }
+
+/* Face selection states for reference photos */
+.face-box.face-selected{
+  border-color:#22c55e!important;
+  opacity:1;
+  box-shadow:0 0 12px rgba(34,197,94,0.4);
+}
+
+.face-box.face-deselected{
+  border-color:#6b7280!important;
+  opacity:0.5;
+  box-shadow:none;
+}
+
+.face-box.face-deselected:hover{
+  opacity:0.75;
+  border-color:#9ca3af!important;
+}
+
+.face-box.face-selected .face-label{
+  background:#22c55e;
+}
+
+.face-box.face-deselected .face-label{
+  background:#6b7280;
+}
+
+/* Selection hint for reference photos */
+.selection-hint{
+  font-size:0.8rem;
+  color:var(--text-muted);
+  margin-top:8px;
+  text-align:center;
+  font-style:italic;
+}
