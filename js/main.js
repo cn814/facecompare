@@ -283,9 +283,18 @@ async function handleReferencePhotos(files) {
         fileWrapper.appendChild(processorElement);
       }
 
+      // Yearbook mode: use higher resolution and lower quality threshold for small faces
+      const isYearbookMode = yearbookToggle.checked;
+      const detectionMaxW = isYearbookMode ? 2500 : 1024;
+      const qualityThreshold = isYearbookMode ? 15 : 30;
+
       // Detect faces on display canvas - coordinates will be in canvas space
+<<<<<<< HEAD
       // Reference photos always use standard settings for best quality
       let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: 1024 });
+=======
+      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: detectionMaxW });
+>>>>>>> 7f8f3048fe2216fada11de63867e7a08fdb787ce
 
       processor.updateProgress(75);
 
@@ -295,9 +304,9 @@ async function handleReferencePhotos(files) {
         continue;
       }
 
-      // Filter out low-quality faces to improve accuracy
+      // Filter out low-quality faces to improve accuracy (lower threshold in yearbook mode)
       const initialCount = detections.length;
-      detections = detections.filter(d => d.quality >= 30);
+      detections = detections.filter(d => d.quality >= qualityThreshold);
 
       // Process each detected face
       detections.forEach((d, j) => { // `j` is now the index in the *filtered* array
