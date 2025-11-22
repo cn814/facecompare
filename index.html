@@ -46,10 +46,49 @@
 
         <div class="box">
           <h2>Comparison Photo(s)</h2>
-          <div id="uploadArea2" class="upload-area" data-target="2">
-            <input id="fileInput2" type="file" accept="image/*" multiple>
-            <div class="prompt">📷 Click or drop one or more images</div>
-            <div id="preview2" class="preview"></div>
+
+          <!-- Source tabs -->
+          <div class="source-tabs">
+            <button class="source-tab active" data-source="file">Upload Files</button>
+            <button class="source-tab" data-source="url">From URL</button>
+          </div>
+
+          <!-- File upload area -->
+          <div id="fileSource" class="source-content active">
+            <div id="uploadArea2" class="upload-area" data-target="2">
+              <input id="fileInput2" type="file" accept="image/*" multiple>
+              <div class="prompt">📷 Click or drop one or more images</div>
+              <div id="preview2" class="preview"></div>
+            </div>
+          </div>
+
+          <!-- URL input area -->
+          <div id="urlSource" class="source-content hidden">
+            <div class="url-input-container">
+              <input type="url" id="urlInput" placeholder="Enter website URL (e.g., https://example.com/gallery)" autocomplete="off">
+              <button id="fetchUrlBtn" class="btn primary">Fetch Images</button>
+            </div>
+            <div class="url-options">
+              <label>
+                <span>Max images:</span>
+                <select id="maxImagesSelect">
+                  <option value="10">10</option>
+                  <option value="25">25</option>
+                  <option value="50" selected>50</option>
+                  <option value="100">100</option>
+                </select>
+              </label>
+              <label>
+                <span>Min size:</span>
+                <select id="minSizeSelect">
+                  <option value="50">50px</option>
+                  <option value="100" selected>100px</option>
+                  <option value="200">200px</option>
+                </select>
+              </label>
+            </div>
+            <div id="urlStatus" class="url-status hidden"></div>
+            <div id="urlPreview" class="preview"></div>
           </div>
         </div>
       </div>

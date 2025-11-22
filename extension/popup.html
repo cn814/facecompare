@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FaceCompare - Image Extractor</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>FaceCompare</h1>
+      <p class="subtitle">Image Extractor</p>
+    </header>
+
+    <div id="status" class="status"></div>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="minSize">Min image size:</label>
+        <select id="minSize">
+          <option value="50">50px</option>
+          <option value="100" selected>100px</option>
+          <option value="200">200px</option>
+          <option value="300">300px</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="maxImages">Max images:</label>
+        <select id="maxImages">
+          <option value="25">25</option>
+          <option value="50" selected>50</option>
+          <option value="100">100</option>
+          <option value="200">200</option>
+        </select>
+      </div>
+    </div>
+
+    <button id="extractBtn" class="btn primary">
+      <span class="btn-icon">🔍</span>
+      Extract Images from Page
+    </button>
+
+    <div id="results" class="results hidden">
+      <div class="results-header">
+        <h2>Found <span id="imageCount">0</span> images</h2>
+        <div class="results-actions">
+          <button id="selectAllBtn" class="btn small">Select All</button>
+          <button id="deselectAllBtn" class="btn small">Deselect All</button>
+        </div>
+      </div>
+
+      <div id="imageGrid" class="image-grid"></div>
+
+      <div class="export-section">
+        <p class="selected-count">Selected: <span id="selectedCount">0</span></p>
+        <button id="exportBtn" class="btn primary" disabled>
+          <span class="btn-icon">📤</span>
+          Send to FaceCompare
+        </button>
+        <button id="downloadBtn" class="btn secondary" disabled>
+          <span class="btn-icon">💾</span>
+          Download Selected
+        </button>
+      </div>
+    </div>
+
+    <div class="footer">
+      <p>Open <a href="#" id="openFaceCompare">FaceCompare Tool</a> to compare faces</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

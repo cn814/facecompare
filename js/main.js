@@ -5,6 +5,7 @@ import { detectSunglassesFast } from './sunglasses.js';
 import { createCanvasForImage, placeFaceBox, drawLandmarksOnCanvas, showProcessing, showError } from './ui.js';
 import { computeSimilarity, computeMultiReferenceSimilarity, averageDescriptors } from './comparison.js';
 import { CONFIG } from './config.js';
+import { fetchImagesFromUrl } from './url-fetcher.js';
 
 // DOM elements
 const loadingText = document.getElementById('loadingText');
@@ -24,6 +25,17 @@ const clearBtn = document.getElementById('clearBtn');
 const referenceInfo = document.getElementById('referenceInfo');
 const refCount = document.getElementById('refCount');
 const matchMethod = document.getElementById('matchMethod');
+
+// URL-related DOM elements
+const sourceTabs = document.querySelectorAll('.source-tab');
+const fileSource = document.getElementById('fileSource');
+const urlSource = document.getElementById('urlSource');
+const urlInput = document.getElementById('urlInput');
+const fetchUrlBtn = document.getElementById('fetchUrlBtn');
+const maxImagesSelect = document.getElementById('maxImagesSelect');
+const minSizeSelect = document.getElementById('minSizeSelect');
+const urlStatus = document.getElementById('urlStatus');
+const urlPreview = document.getElementById('urlPreview');
 
 // Application state - NOW SUPPORTS MULTIPLE REFERENCES
 let referencePhotos = []; // Array of {image, faces, canvas, wrapper, file}
@@ -139,6 +151,41 @@ function setupUI() {
       debugToggle.checked = !debugToggle.checked;
       redrawAllReferences();
       redrawComparisons();
+    }
+  });
+
+  // Source tab switching
+  sourceTabs.forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      const source = tab.dataset.source;
+
+      // Update tab active state
+      sourceTabs.forEach(function(t) { t.classList.remove('active'); });
+      tab.classList.add('active');
+
+      // Show/hide content
+      if (source === 'file') {
+        fileSource.classList.add('active');
+        fileSource.classList.remove('hidden');
+        urlSource.classList.remove('active');
+        urlSource.classList.add('hidden');
+      } else {
+        urlSource.classList.add('active');
+        urlSource.classList.remove('hidden');
+        fileSource.classList.remove('active');
+        fileSource.classList.add('hidden');
+      }
+    });
+  });
+
+  // URL fetch button
+  fetchUrlBtn.addEventListener('click', handleUrlFetch);
+
+  // URL input enter key
+  urlInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleUrlFetch();
     }
   });
 }
@@ -410,6 +457,269 @@ async function handleComparisons(files) {
   }
   
   setDisabledState();
+}
+
+/**
+ * Handle URL fetch button click
+ */
+async function handleUrlFetch() {
+  const url = urlInput.value.trim();
+
+  if (!url) {
+    showUrlStatus('Please enter a URL', 'error');
+    return;
+  }
+
+  // Validate URL
+  try {
+    new URL(url);
+  } catch (e) {
+    showUrlStatus('Invalid URL format', 'error');
+    return;
+  }
+
+  const maxImages = parseInt(maxImagesSelect.value, 10);
+  const minSize = parseInt(minSizeSelect.value, 10);
+
+  // Disable button during fetch
+  fetchUrlBtn.disabled = true;
+  fetchUrlBtn.textContent = 'Fetching...';
+  urlPreview.innerHTML = '';
+
+  showUrlStatus('<div class="progress-info"><div class="mini-spinner"></div><span>Starting fetch...</span></div>', 'loading');
+
+  try {
+    const images = await fetchImagesFromUrl(url, {
+      maxImages: maxImages,
+      minWidth: minSize,
+      minHeight: minSize,
+      onProgress: function(pct, msg) {
+        showUrlStatus('<div class="progress-info"><div class="mini-spinner"></div><span>' + msg + '</span></div>', 'loading');
+      }
+    });
+
+    if (images.length === 0) {
+      showUrlStatus('No suitable images found on the page', 'error');
+      fetchUrlBtn.disabled = false;
+      fetchUrlBtn.textContent = 'Fetch Images';
+      return;
+    }
+
+    showUrlStatus('Found ' + images.length + ' images. Click to select, then process selected images.', 'success');
+
+    // Display fetched images for selection
+    displayUrlImages(images);
+
+  } catch (err) {
+    showUrlStatus('Error: ' + err.message, 'error');
+  }
+
+  fetchUrlBtn.disabled = false;
+  fetchUrlBtn.textContent = 'Fetch Images';
+}
+
+/**
+ * Show URL status message
+ */
+function showUrlStatus(message, type) {
+  urlStatus.innerHTML = message;
+  urlStatus.className = 'url-status ' + type;
+  urlStatus.classList.remove('hidden');
+}
+
+/**
+ * Display fetched URL images for selection
+ */
+function displayUrlImages(images) {
+  urlPreview.innerHTML = '';
+
+  // Store images in a data attribute for later processing
+  urlPreview.dataset.images = JSON.stringify(images.map(function(img, idx) {
+    return { index: idx, url: img.url, filename: img.filename };
+  }));
+
+  // Create image items
+  images.forEach(function(imgData, idx) {
+    const item = document.createElement('div');
+    item.className = 'url-image-item';
+    item.dataset.index = idx;
+
+    const img = document.createElement('img');
+    img.src = imgData.image.src;
+    img.alt = imgData.filename;
+
+    const badge = document.createElement('div');
+    badge.className = 'select-badge';
+    badge.textContent = '✓';
+
+    item.appendChild(img);
+    item.appendChild(badge);
+
+    // Toggle selection on click
+    item.addEventListener('click', function() {
+      item.classList.toggle('selected');
+      updateUrlActions();
+    });
+
+    urlPreview.appendChild(item);
+
+    // Store the actual image element for later use
+    item._imageData = imgData;
+  });
+
+  // Add action buttons
+  const actions = document.createElement('div');
+  actions.className = 'url-actions';
+  actions.innerHTML =
+    '<button class="btn secondary" id="selectAllUrlBtn">Select All</button>' +
+    '<button class="btn primary" id="processUrlBtn" disabled>Process Selected (0)</button>';
+  urlPreview.appendChild(actions);
+
+  // Select all button
+  document.getElementById('selectAllUrlBtn').addEventListener('click', function() {
+    const items = urlPreview.querySelectorAll('.url-image-item');
+    const allSelected = Array.from(items).every(function(i) { return i.classList.contains('selected'); });
+
+    items.forEach(function(item) {
+      if (allSelected) {
+        item.classList.remove('selected');
+      } else {
+        item.classList.add('selected');
+      }
+    });
+
+    updateUrlActions();
+  });
+
+  // Process button
+  document.getElementById('processUrlBtn').addEventListener('click', processSelectedUrlImages);
+}
+
+/**
+ * Update URL action buttons based on selection
+ */
+function updateUrlActions() {
+  const selected = urlPreview.querySelectorAll('.url-image-item.selected');
+  const processBtn = document.getElementById('processUrlBtn');
+
+  if (processBtn) {
+    processBtn.disabled = selected.length === 0;
+    processBtn.textContent = 'Process Selected (' + selected.length + ')';
+  }
+}
+
+/**
+ * Process selected URL images for face comparison
+ */
+async function processSelectedUrlImages() {
+  const selectedItems = urlPreview.querySelectorAll('.url-image-item.selected');
+
+  if (selectedItems.length === 0) {
+    alert('Please select at least one image');
+    return;
+  }
+
+  // Clear existing comparisons
+  preview2.innerHTML = '';
+  comparisons = [];
+
+  // Process each selected image
+  for (const item of selectedItems) {
+    const imgData = item._imageData;
+    if (!imgData || !imgData.image) continue;
+
+    const fileWrapper = document.createElement('div');
+    fileWrapper.className = 'comparison-file-wrapper';
+    preview2.appendChild(fileWrapper);
+
+    const processor = showProcessing(fileWrapper, 'Processing ' + imgData.filename + '...');
+
+    try {
+      processor.updateProgress(10);
+      const img = imgData.image;
+      processor.updateProgress(30);
+
+      const canvasData = createCanvasForImage(img, CONFIG.ui.comparisonMaxWidth, CONFIG.ui.comparisonMaxHeight);
+      const canvas = canvasData.canvas;
+
+      const wrapper = document.createElement('div');
+      wrapper.style.position = 'relative';
+      wrapper.style.display = 'inline-block';
+      wrapper.dataset.fileName = imgData.filename;
+      wrapper.appendChild(canvas);
+
+      processor.updateProgress(50);
+
+      // Replace content while keeping processor overlay
+      const processorElement = fileWrapper.querySelector('.processing-overlay');
+      fileWrapper.innerHTML = '';
+      fileWrapper.appendChild(wrapper);
+      if (processorElement) {
+        fileWrapper.appendChild(processorElement);
+      }
+
+      // Detect faces on display canvas
+      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: 1024 });
+
+      processor.updateProgress(75);
+
+      if (detections.length === 0) {
+        processor.remove();
+        const err = document.createElement('div');
+        err.className = 'error';
+        err.textContent = 'No faces detected in ' + imgData.filename;
+        wrapper.appendChild(err);
+      } else {
+        // Filter out low-quality faces
+        const initialCount = detections.length;
+        detections = detections.filter(function(d) { return d.quality >= 30; });
+
+        detections.forEach(function(d, j) {
+          const sunglassesResult = detectSunglassesFast(img, d.landmarks);
+          d.hasSunglasses = sunglassesResult.hasSunglasses;
+          d.sunglassesConfidence = sunglassesResult.confidence;
+
+          if (debugToggle.checked) drawLandmarksOnCanvas(canvas, d.landmarks);
+
+          const box = d.detection.box;
+          const ageSuffix = typeof d.age === 'number' ? ' (~' + Math.round(d.age) + 'y)' : '';
+          const sunglassesIndicator = d.hasSunglasses ? ' 🕶️' : '';
+
+          if (initialCount > detections.length && j === 0) {
+            d.qualityNote = (initialCount - detections.length) + ' low-quality face(s) ignored.';
+          }
+
+          placeFaceBox(wrapper, box, j, (j + 1) + ageSuffix + sunglassesIndicator, '#f59e0b', canvas, d.quality);
+        });
+
+        processor.updateProgress(90);
+
+        comparisons.push({
+          file: { name: imgData.filename }, // Fake file object for compatibility
+          image: img,
+          faces: detections,
+          canvas: canvas,
+          wrapper: wrapper,
+          sourceUrl: imgData.url
+        });
+
+        processor.updateProgress(100);
+      }
+    } catch (err) {
+      processor.remove();
+      showError(fileWrapper, 'Error processing ' + imgData.filename + ': ' + err.message);
+    }
+  }
+
+  setDisabledState();
+
+  // Switch to file source tab to show results
+  sourceTabs.forEach(function(t) { t.classList.remove('active'); });
+  document.querySelector('.source-tab[data-source="file"]').classList.add('active');
+  fileSource.classList.add('active');
+  fileSource.classList.remove('hidden');
+  urlSource.classList.remove('active');
+  urlSource.classList.add('hidden');
 }
 
 /**
@@ -1056,5 +1366,126 @@ function fileToImage(file) {
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', function() {
   setupUI();
-  boot();
+  boot().then(function() {
+    // Check for images passed via URL hash (from browser extension)
+    checkForExtensionImages();
+  });
 });
+
+/**
+ * Check for images passed from browser extension via URL hash
+ */
+function checkForExtensionImages() {
+  const hash = window.location.hash;
+  if (!hash || !hash.startsWith('#images=')) return;
+
+  try {
+    const encoded = hash.substring(8); // Remove '#images='
+    const imageUrls = JSON.parse(decodeURIComponent(encoded));
+
+    if (!Array.isArray(imageUrls) || imageUrls.length === 0) return;
+
+    // Clear the hash to avoid reprocessing on refresh
+    history.replaceState(null, '', window.location.pathname);
+
+    // Show notification
+    showUrlStatus('Received ' + imageUrls.length + ' images from extension. Loading...', 'loading');
+
+    // Switch to URL tab
+    sourceTabs.forEach(function(t) { t.classList.remove('active'); });
+    document.querySelector('.source-tab[data-source="url"]').classList.add('active');
+    fileSource.classList.remove('active');
+    fileSource.classList.add('hidden');
+    urlSource.classList.add('active');
+    urlSource.classList.remove('hidden');
+
+    // Load images from URLs
+    loadExtensionImages(imageUrls);
+
+  } catch (e) {
+    console.error('Failed to parse extension images:', e);
+  }
+}
+
+/**
+ * Load images passed from browser extension
+ */
+async function loadExtensionImages(imageUrls) {
+  const images = [];
+  let loaded = 0;
+
+  for (const url of imageUrls) {
+    try {
+      const img = await loadImageFromUrl(url);
+      images.push({
+        image: img,
+        url: url,
+        filename: extractFilenameFromUrl(url)
+      });
+    } catch (e) {
+      console.error('Failed to load image:', url, e);
+    }
+
+    loaded++;
+    showUrlStatus('Loading images: ' + loaded + '/' + imageUrls.length, 'loading');
+  }
+
+  if (images.length === 0) {
+    showUrlStatus('Failed to load images from extension', 'error');
+    return;
+  }
+
+  showUrlStatus('Loaded ' + images.length + ' images. Click to select, then process.', 'success');
+  displayUrlImages(images);
+}
+
+/**
+ * Load a single image from URL
+ */
+function loadImageFromUrl(url) {
+  return new Promise(function(resolve, reject) {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    const timeout = setTimeout(function() {
+      reject(new Error('Image load timeout'));
+    }, 15000);
+
+    img.onload = function() {
+      clearTimeout(timeout);
+      resolve(img);
+    };
+
+    img.onerror = function() {
+      clearTimeout(timeout);
+      // Try with CORS proxy
+      const proxyImg = new Image();
+      proxyImg.crossOrigin = 'anonymous';
+
+      proxyImg.onload = function() {
+        resolve(proxyImg);
+      };
+
+      proxyImg.onerror = function() {
+        reject(new Error('Failed to load image'));
+      };
+
+      proxyImg.src = 'https://corsproxy.io/?' + encodeURIComponent(url);
+    };
+
+    img.src = url;
+  });
+}
+
+/**
+ * Extract filename from URL
+ */
+function extractFilenameFromUrl(url) {
+  try {
+    const pathname = new URL(url).pathname;
+    const filename = pathname.split('/').pop() || 'image';
+    return decodeURIComponent(filename).substring(0, 100);
+  } catch (e) {
+    return 'image_' + Date.now();
+  }
+}
