@@ -294,14 +294,22 @@ async function exportToFaceCompare() {
     timestamp: Date.now()
   });
 
-  // Create URL with image data (for smaller sets) or just open the tool
+  // Create URL with image data
   const imageUrls = selected.map(img => img.url);
 
-  // If few images, pass via URL hash (avoids server-side processing)
+  // Pass images via URL hash (limit to ~50 to avoid URL length issues)
   let targetUrl = FACECOMPARE_URL;
-  if (imageUrls.length <= 10) {
-    const encoded = encodeURIComponent(JSON.stringify(imageUrls));
+  const encoded = encodeURIComponent(JSON.stringify(imageUrls));
+
+  // Check URL length - browsers typically support ~2000 chars, but let's be safe
+  if (encoded.length < 8000) {
     targetUrl = FACECOMPARE_URL + '#images=' + encoded;
+    console.log('[FaceCompare Extension] Opening with hash, length:', encoded.length);
+  } else {
+    // Too many images - user will need to use the URL fetch feature manually
+    console.log('[FaceCompare Extension] Too many images for URL hash, opening without');
+    showStatus('Too many images for direct transfer. Use "Download Selected" then upload to FaceCompare.', 'error');
+    return;
   }
 
   // Open FaceCompare with the images

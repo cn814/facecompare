@@ -1377,33 +1377,45 @@ document.addEventListener('DOMContentLoaded', function() {
  */
 function checkForExtensionImages() {
   const hash = window.location.hash;
-  if (!hash || !hash.startsWith('#images=')) return;
+  console.log('[FaceCompare] Checking for extension images, hash:', hash);
+
+  if (!hash || !hash.startsWith('#images=')) {
+    console.log('[FaceCompare] No extension images in hash');
+    return;
+  }
 
   try {
     const encoded = hash.substring(8); // Remove '#images='
     const imageUrls = JSON.parse(decodeURIComponent(encoded));
+    console.log('[FaceCompare] Parsed image URLs:', imageUrls);
 
-    if (!Array.isArray(imageUrls) || imageUrls.length === 0) return;
+    if (!Array.isArray(imageUrls) || imageUrls.length === 0) {
+      console.log('[FaceCompare] No valid image URLs found');
+      return;
+    }
 
     // Clear the hash to avoid reprocessing on refresh
     history.replaceState(null, '', window.location.pathname);
 
-    // Show notification
-    showUrlStatus('Received ' + imageUrls.length + ' images from extension. Loading...', 'loading');
-
-    // Switch to URL tab
+    // Switch to URL tab first so the status div is visible
     sourceTabs.forEach(function(t) { t.classList.remove('active'); });
-    document.querySelector('.source-tab[data-source="url"]').classList.add('active');
+    const urlTab = document.querySelector('.source-tab[data-source="url"]');
+    if (urlTab) urlTab.classList.add('active');
     fileSource.classList.remove('active');
     fileSource.classList.add('hidden');
     urlSource.classList.add('active');
     urlSource.classList.remove('hidden');
 
+    // Show notification
+    showUrlStatus('Received ' + imageUrls.length + ' images from extension. Loading...', 'loading');
+    console.log('[FaceCompare] Starting to load extension images');
+
     // Load images from URLs
     loadExtensionImages(imageUrls);
 
   } catch (e) {
-    console.error('Failed to parse extension images:', e);
+    console.error('[FaceCompare] Failed to parse extension images:', e);
+    showUrlStatus('Failed to parse images from extension: ' + e.message, 'error');
   }
 }
 
@@ -1411,27 +1423,34 @@ function checkForExtensionImages() {
  * Load images passed from browser extension
  */
 async function loadExtensionImages(imageUrls) {
+  console.log('[FaceCompare] loadExtensionImages called with', imageUrls.length, 'URLs');
   const images = [];
   let loaded = 0;
+  let failed = 0;
 
   for (const url of imageUrls) {
     try {
+      console.log('[FaceCompare] Loading image:', url);
       const img = await loadImageFromUrl(url);
       images.push({
         image: img,
         url: url,
         filename: extractFilenameFromUrl(url)
       });
+      console.log('[FaceCompare] Successfully loaded:', url);
     } catch (e) {
-      console.error('Failed to load image:', url, e);
+      console.error('[FaceCompare] Failed to load image:', url, e);
+      failed++;
     }
 
     loaded++;
-    showUrlStatus('Loading images: ' + loaded + '/' + imageUrls.length, 'loading');
+    showUrlStatus('Loading images: ' + loaded + '/' + imageUrls.length + (failed > 0 ? ' (' + failed + ' failed)' : ''), 'loading');
   }
 
+  console.log('[FaceCompare] Finished loading. Success:', images.length, 'Failed:', failed);
+
   if (images.length === 0) {
-    showUrlStatus('Failed to load images from extension', 'error');
+    showUrlStatus('Failed to load images from extension. Images may be blocked by CORS.', 'error');
     return;
   }
 
@@ -1440,40 +1459,55 @@ async function loadExtensionImages(imageUrls) {
 }
 
 /**
- * Load a single image from URL
+ * Load a single image from URL (with CORS proxy fallback)
  */
 function loadImageFromUrl(url) {
   return new Promise(function(resolve, reject) {
+    // Try direct load first
     const img = new Image();
     img.crossOrigin = 'anonymous';
 
     const timeout = setTimeout(function() {
-      reject(new Error('Image load timeout'));
-    }, 15000);
+      console.log('[FaceCompare] Direct load timeout, trying proxy:', url);
+      tryWithProxy();
+    }, 5000);
 
     img.onload = function() {
       clearTimeout(timeout);
+      console.log('[FaceCompare] Direct load success:', url);
       resolve(img);
     };
 
     img.onerror = function() {
       clearTimeout(timeout);
-      // Try with CORS proxy
+      console.log('[FaceCompare] Direct load failed, trying proxy:', url);
+      tryWithProxy();
+    };
+
+    img.src = url;
+
+    function tryWithProxy() {
       const proxyImg = new Image();
       proxyImg.crossOrigin = 'anonymous';
 
+      const proxyTimeout = setTimeout(function() {
+        reject(new Error('Proxy load timeout'));
+      }, 15000);
+
       proxyImg.onload = function() {
+        clearTimeout(proxyTimeout);
+        console.log('[FaceCompare] Proxy load success:', url);
         resolve(proxyImg);
       };
 
       proxyImg.onerror = function() {
+        clearTimeout(proxyTimeout);
+        console.log('[FaceCompare] Proxy load failed:', url);
         reject(new Error('Failed to load image'));
       };
 
       proxyImg.src = 'https://corsproxy.io/?' + encodeURIComponent(url);
-    };
-
-    img.src = url;
+    }
   });
 }
 
