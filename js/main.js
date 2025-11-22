@@ -21,6 +21,7 @@ const preview2 = document.getElementById('preview2');
 const compareBtn = document.getElementById('compareBtn');
 const resultsDiv = document.getElementById('results');
 const debugToggle = document.getElementById('debugToggle');
+const yearbookToggle = document.getElementById('yearbookToggle');
 const clearBtn = document.getElementById('clearBtn');
 const referenceInfo = document.getElementById('referenceInfo');
 const refCount = document.getElementById('refCount');
@@ -282,8 +283,13 @@ async function handleReferencePhotos(files) {
         fileWrapper.appendChild(processorElement);
       }
 
+      // Yearbook mode: use higher resolution and lower quality threshold for small faces
+      const isYearbookMode = yearbookToggle.checked;
+      const detectionMaxW = isYearbookMode ? 2500 : 1024;
+      const qualityThreshold = isYearbookMode ? 15 : 30;
+
       // Detect faces on display canvas - coordinates will be in canvas space
-      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: 1024 });
+      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: detectionMaxW });
 
       processor.updateProgress(75);
 
@@ -293,9 +299,9 @@ async function handleReferencePhotos(files) {
         continue;
       }
 
-      // Filter out low-quality faces to improve accuracy
+      // Filter out low-quality faces to improve accuracy (lower threshold in yearbook mode)
       const initialCount = detections.length;
-      detections = detections.filter(d => d.quality >= 30);
+      detections = detections.filter(d => d.quality >= qualityThreshold);
 
       // Process each detected face
       detections.forEach((d, j) => { // `j` is now the index in the *filtered* array
@@ -454,8 +460,13 @@ async function handleComparisons(files) {
         fileWrapper.appendChild(processorElement);
       }
 
+      // Yearbook mode: use higher resolution and lower quality threshold for small faces
+      const isYearbookMode = yearbookToggle.checked;
+      const detectionMaxW = isYearbookMode ? 2500 : 1024;
+      const qualityThreshold = isYearbookMode ? 15 : 30;
+
       // Detect faces on display canvas - coordinates will be in canvas space
-      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: 1024 });
+      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: detectionMaxW });
 
       processor.updateProgress(75);
 
@@ -466,9 +477,9 @@ async function handleComparisons(files) {
         err.textContent = 'No faces detected in ' + file.name;
         wrapper.appendChild(err);
       } else {
-        // Filter out low-quality faces to improve accuracy
+        // Filter out low-quality faces to improve accuracy (lower threshold in yearbook mode)
         const initialCount = detections.length;
-        detections = detections.filter(d => d.quality >= 30);
+        detections = detections.filter(d => d.quality >= qualityThreshold);
 
         detections.forEach((d, j) => { // `j` is now the index in the *filtered* array
           const sunglassesResult = detectSunglassesFast(img, d.landmarks);
@@ -709,8 +720,13 @@ async function processSelectedUrlImages() {
         fileWrapper.appendChild(processorElement);
       }
 
+      // Yearbook mode: use higher resolution and lower quality threshold for small faces
+      const isYearbookMode = yearbookToggle.checked;
+      const detectionMaxW = isYearbookMode ? 2500 : 1024;
+      const qualityThreshold = isYearbookMode ? 15 : 30;
+
       // Detect faces on display canvas
-      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: 1024 });
+      let detections = await faceService.detectAllFaces(canvas, { useTiny: false, maxW: detectionMaxW });
 
       processor.updateProgress(75);
 
@@ -721,9 +737,9 @@ async function processSelectedUrlImages() {
         err.textContent = 'No faces detected in ' + imgData.filename;
         wrapper.appendChild(err);
       } else {
-        // Filter out low-quality faces
+        // Filter out low-quality faces (lower threshold in yearbook mode)
         const initialCount = detections.length;
-        detections = detections.filter(function(d) { return d.quality >= 30; });
+        detections = detections.filter(function(d) { return d.quality >= qualityThreshold; });
 
         detections.forEach(function(d, j) {
           const sunglassesResult = detectSunglassesFast(img, d.landmarks);
